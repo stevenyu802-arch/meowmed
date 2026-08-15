@@ -102,11 +102,9 @@ export default function App() {
   const handleMedCheckClick = (med) => {
     const logs = getTakenLogsOnDate(med.id, selectedDate);
     if (logs.length === 0) {
-      // 第一次點擊：直接幫佢當刻打剔食藥
       const now = new Date();
       addDoseLog(med, now.toTimeString().slice(0, 5));
     } else {
-      // 已經食過（有記錄），再撳先彈出管理視窗（補Mark / 扣減）
       setConfirmModalMed(med);
     }
   };
@@ -576,14 +574,15 @@ export default function App() {
               </p>
             </div>
 
-            {/* 修復：調整 container 闊度同 padding，防止時間選擇器出界 */}
+            {/* 修復：嚴格限制時間選擇器高度、內距與外框，防止拉得太長 */}
             <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200/70 space-y-1.5 overflow-hidden">
               <label className="block text-xs font-bold text-stone-600">實際服藥時間：</label>
               <input 
                 type="time" 
                 defaultValue={confirmModalMed.time || new Date().toTimeString().slice(0, 5)}
                 id="custom-dose-time"
-                className="w-full max-w-full box-border bg-white border border-stone-300 rounded-xl px-3 py-2.5 text-sm font-bold text-stone-800 text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full max-w-full box-border bg-white border border-stone-300 rounded-xl px-3 py-1.5 text-sm font-bold text-stone-800 text-center focus:outline-none focus:ring-2 focus:ring-amber-500 leading-normal"
+                style={{ minHeight: 'auto' }}
               />
             </div>
 
@@ -655,7 +654,8 @@ export default function App() {
                     type="time"
                     value={addForm.time}
                     onChange={(e) => setAddForm({ ...addForm, time: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2.5 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
+                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center leading-normal"
+                    style={{ minHeight: 'auto' }}
                   />
                 </div>
               </div>
@@ -743,7 +743,8 @@ export default function App() {
                     type="time"
                     value={editForm.time}
                     onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2.5 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
+                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center leading-normal"
+                    style={{ minHeight: 'auto' }}
                   />
                 </div>
               </div>

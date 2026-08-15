@@ -100,17 +100,13 @@ export default function App() {
   };
 
   const handleMedCheckClick = (med) => {
-    const logs = getTakenLogsOnDate(med.id, selectedDate);
-    if (logs.length > 0) {
-      setConfirmModalMed(med);
-    } else {
-      addDoseLog(med);
-    }
+    // 無論有冇食過，點擊勾選都彈出管理視窗，方便補Mark或調整時間
+    setConfirmModalMed(med);
   };
 
-  const addDoseLog = (med) => {
+  const addDoseLog = (med, customTimeStr = null) => {
     const now = new Date();
-    const timeStr = now.toTimeString().slice(0, 5);
+    const timeStr = customTimeStr || now.toTimeString().slice(0, 5);
     const newLog = {
       id: Date.now(),
       medId: med.id,
@@ -200,9 +196,7 @@ export default function App() {
     const parsedStock = parseInt(addForm.stock, 10) || 0;
     const newMedItem = { ...addForm, stock: parsedStock, id: Date.now() };
     
-    // 直接更新 React State，確保畫面即時反應
     setMedications(prev => [...prev, newMedItem]);
-    // 徹底重設表格並安全關閉 Modal
     setAddForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
     setIsAddModalOpen(false);
   };
@@ -224,9 +218,7 @@ export default function App() {
     if (!editForm.name) return;
     const parsedStock = parseInt(editForm.stock, 10) || 0;
     
-    // 直接更新 React State
     setMedications(prev => prev.map(m => m.id === editingMedId ? { ...editForm, stock: parsedStock, id: editingMedId } : m));
-    // 徹底清空編輯表單並安全關閉 Modal
     setEditForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
     setEditingMedId(null);
     setIsEditModalOpen(false);
@@ -569,26 +561,39 @@ export default function App() {
               </button>
             </div>
 
-            <div className="space-y-2 text-stone-700 text-sm">
+            <div className="space-y-1 text-stone-700 text-sm">
               <p className="font-bold text-amber-700">{confirmModalMed.name}</p>
               <p className="text-xs text-stone-500">
-                你在 <span className="font-bold">{selectedDate}</span> 已經記錄過服用這款藥物 
-                <span className="font-bold text-emerald-600"> ({getTakenLogsOnDate(confirmModalMed.id, selectedDate).length} 次)</span>。
+                你在 <span className="font-bold">{selectedDate}</span> 已記錄 <span className="font-bold text-emerald-600">{getTakenLogsOnDate(confirmModalMed.id, selectedDate).length} 次</span>。如需補Mark，可自由調整實際食藥時間：
               </p>
             </div>
 
-            <div className="space-y-2 pt-2">
+            <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200/70 space-y-1.5">
+              <label className="block text-xs font-bold text-stone-600">實際服藥時間：</label>
+              <input 
+                type="time" 
+                defaultValue={confirmModalMed.time || new Date().toTimeString().slice(0, 5)}
+                id="custom-dose-time"
+                className="w-full bg-white border border-stone-300 rounded-xl p-2.5 text-sm font-bold text-stone-800 text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div className="space-y-2 pt-1">
               <button 
-                onClick={() => addDoseLog(confirmModalMed)}
+                onClick={() => {
+                  const timeInputEl = document.getElementById('custom-dose-time');
+                  const selectedTime = timeInputEl ? timeInputEl.value : null;
+                  addDoseLog(confirmModalMed, selectedTime);
+                }}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm"
               >
-                <PlusCircle className="w-4 h-4" /> 追加服藥一次 (今日多食 1 劑)
+                <PlusCircle className="w-4 h-4" /> 確認以指定時間補Mark一次
               </button>
               <button 
                 onClick={() => removeOneDoseLog(confirmModalMed)}
                 className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 border border-rose-200"
               >
-                <MinusCircle className="w-4 h-4" /> 扣減/取消 1 次紀錄
+                <MinusCircle className="w-4 h-4" /> 扣減/取消最近 1 次紀錄
               </button>
               <button 
                 onClick={() => setConfirmModalMed(null)}

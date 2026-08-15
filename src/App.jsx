@@ -1,6 +1,6 @@
 import FontSizeControl from "./FontSizeControl";
 import React, { useState, useEffect } from 'react';
-import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, History, X, AlertCircle, Package, PlusCircle, MinusCircle, Sparkles, Download, BellRing } from 'lucide-react';
+import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, History, X, AlertCircle, Package, PlusCircle, MinusCircle, Sparkles, Download, BellRing, Save } from 'lucide-react';
 
 export default function App() {
   const getTodayStr = () => {
@@ -64,6 +64,7 @@ export default function App() {
   const [editForm, setEditForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
 
   const [confirmModalMed, setConfirmModalMed] = useState(null);
+  const [newLogTimeInput, setNewLogTimeInput] = useState('08:00');
 
   const [catMoodIndex, setCatMoodIndex] = useState(0);
   const catQuotes = [
@@ -71,7 +72,7 @@ export default function App() {
     "喵！有按時食藥嘅主人最精靈！✨",
     "喵～今日飲咗足夠嘅溫水未呀？💧",
     "喵嗚～要隨時留意藥物庫存，冇藥要早啲補！📦",
-    "喵～可以點擊庫存管理加入手機定時提醒啊！📅"
+    "喵～可以點擊日曆圖示加入手機定時提醒啊！📅"
   ];
 
   useEffect(() => {
@@ -105,6 +106,7 @@ export default function App() {
       const now = new Date();
       addDoseLog(med, now.toTimeString().slice(0, 5));
     } else {
+      setNewLogTimeInput(new Date().toTimeString().slice(0, 5));
       setConfirmModalMed(med);
     }
   };
@@ -122,27 +124,19 @@ export default function App() {
       timestamp: Date.now()
     };
 
-    setHistoryLogs([newLog, ...historyLogs]);
-    setMedications(medications.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
-    setConfirmModalMed(null);
-
-    if (selectedDate !== getTodayStr()) {
-      setSelectedDate(getTodayStr());
-    }
+    setHistoryLogs(prev => [newLog, ...prev]);
+    setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
   };
 
-  const removeOneDoseLog = (med) => {
-    const logs = getTakenLogsOnDate(med.id, selectedDate);
-    if (logs.length === 0) return;
+  // UX 核心：修改指定紀錄嘅時間
+  const updateSpecificLogTime = (logId, newTimeStr) => {
+    setHistoryLogs(prev => prev.map(log => log.id === logId ? { ...log, timeStr: newTimeStr } : log));
+  };
 
-    const lastLogId = logs[0].id;
-    setHistoryLogs(historyLogs.filter(log => log.id !== lastLogId));
-    setMedications(medications.map(m => m.id === med.id ? { ...m, stock: m.stock + 1 } : m));
-    setConfirmModalMed(null);
-
-    if (selectedDate !== getTodayStr()) {
-      setSelectedDate(getTodayStr());
-    }
+  // UX 核心：獨立刪除某一次紀錄
+  const deleteSpecificLog = (logId, medId) => {
+    setHistoryLogs(prev => prev.filter(log => log.id !== logId));
+    setMedications(prev => prev.map(m => m.id === medId ? { ...m, stock: m.stock + 1 } : m));
   };
 
   const exportToIosCalendar = (med) => {
@@ -393,7 +387,7 @@ export default function App() {
                         <button 
                           onClick={() => handleMedCheckClick(med)}
                           className="mt-0.5 transition active:scale-90 relative"
-                          title={takenCount === 0 ? "點擊打剔食藥" : "已打剔，再次點擊管理/補Mark"}
+                          title={takenCount === 0 ? "點擊打剔食藥" : "已打剔，點擊管理/修改服藥時間"}
                         >
                           {takenCount > 0 ? (
                             <div className="relative">
@@ -509,6 +503,7 @@ export default function App() {
         )}
       </main>
 
+      {/* 彈出提示視窗 */}
       {catAlert.isOpen && (
         <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-amber-100 space-y-4">
@@ -555,64 +550,107 @@ export default function App() {
         </div>
       )}
 
-      {confirmModalMed && (
-        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4 border border-stone-100">
-            <div className="flex justify-between items-center border-b border-stone-100 pb-3">
-              <h3 className="font-bold text-base text-stone-900 flex items-center gap-1.5">
-                <Cat className="w-5 h-5 text-amber-600" /> 服藥紀錄管理
-              </h3>
-              <button onClick={() => setConfirmModalMed(null)} className="text-stone-400 hover:text-stone-600 p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* 重點升級：全新 UX 服藥紀錄與時間微調 Modal */}
+      {confirmModalMed && (() => {
+        const currentDateLogs = getTakenLogsOnDate(confirmModalMed.id, selectedDate);
 
-            <div className="space-y-1 text-stone-700 text-sm">
-              <p className="font-bold text-amber-700">{confirmModalMed.name}</p>
-              <p className="text-xs text-stone-500">
-                你在 <span className="font-bold">{selectedDate}</span> 已記錄 <span className="font-bold text-emerald-600">{getTakenLogsOnDate(confirmModalMed.id, selectedDate).length} 次</span>。如需補Mark，可調整實際時間：
-              </p>
-            </div>
+        return (
+          <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4 border border-stone-100 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center border-b border-stone-100 pb-3">
+                <h3 className="font-bold text-base text-stone-900 flex items-center gap-1.5">
+                  <Cat className="w-5 h-5 text-amber-600" /> 服藥時間管理
+                </h3>
+                <button onClick={() => setConfirmModalMed(null)} className="text-stone-400 hover:text-stone-600 p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            {/* 修復：改用左右並排 flex layout，徹底解決 iOS input type=time 直向過長問題 */}
-            <div className="bg-stone-50 px-3.5 py-2.5 rounded-2xl border border-stone-200/70 flex items-center justify-between">
-              <span className="text-xs font-bold text-stone-600 shrink-0">實際服藥時間：</span>
-              <input 
-                type="time" 
-                defaultValue={confirmModalMed.time || new Date().toTimeString().slice(0, 5)}
-                id="custom-dose-time"
-                className="bg-white border border-stone-300 rounded-xl px-3 py-1 text-xs font-bold text-stone-800 text-center focus:outline-none focus:ring-2 focus:ring-amber-500 w-32"
-              />
-            </div>
+              <div className="space-y-1 text-stone-700 text-sm">
+                <p className="font-bold text-amber-700 text-base">{confirmModalMed.name}</p>
+                <p className="text-xs text-stone-500 font-medium">
+                  日期：<span className="font-bold text-stone-800">{selectedDate}</span> （已記錄 <span className="font-bold text-emerald-600">{currentDateLogs.length} 次</span>）
+                </p>
+              </div>
 
-            <div className="space-y-2 pt-1">
-              <button 
-                onClick={() => {
-                  const timeInputEl = document.getElementById('custom-dose-time');
-                  const selectedTime = timeInputEl ? timeInputEl.value : null;
-                  addDoseLog(confirmModalMed, selectedTime);
-                }}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <PlusCircle className="w-4 h-4" /> 確認以指定時間補Mark一次
-              </button>
-              <button 
-                onClick={() => removeOneDoseLog(confirmModalMed)}
-                className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 border border-rose-200"
-              >
-                <MinusCircle className="w-4 h-4" /> 扣減/取消最近 1 次紀錄
-              </button>
-              <button 
-                onClick={() => setConfirmModalMed(null)}
-                className="w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2 rounded-xl text-xs"
-              >
-                取消
-              </button>
+              {/* 1. 已有紀錄列表：可直接改時間 / 單獨刪除 */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-stone-600">已記錄嘅服藥時間 (可直接修改)：</label>
+                {currentDateLogs.length === 0 ? (
+                  <p className="text-xs text-stone-400 italic">今日暫時未有紀錄</p>
+                ) : (
+                  currentDateLogs.map((log, idx) => (
+                    <div key={log.id} className="bg-stone-50 p-2.5 rounded-2xl border border-stone-200/70 flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-stone-600 shrink-0">
+                        第 {currentDateLogs.length - idx} 次：
+                      </span>
+                      
+                      {/* 直接修改特定紀錄的時間 */}
+                      <input 
+                        type="time" 
+                        value={log.timeStr}
+                        onChange={(e) => updateSpecificLogTime(log.id, e.target.value)}
+                        className="bg-white border border-stone-300 rounded-xl px-2.5 py-1 text-xs font-bold text-stone-800 text-center w-28 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+
+                      {/* 獨立刪除該條紀錄 */}
+                      <button 
+                        onClick={() => {
+                          deleteSpecificLog(log.id, confirmModalMed.id);
+                          if (currentDateLogs.length <= 1) {
+                            setConfirmModalMed(null);
+                          }
+                        }}
+                        className="text-stone-400 hover:text-rose-500 p-1.5 transition rounded-lg hover:bg-rose-50"
+                        title="刪除呢次紀錄"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <hr className="border-stone-100 my-2" />
+
+              {/* 2. 補 Mark 多一次區塊 */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-stone-600">補 Mark 多一次：</label>
+                <div className="bg-amber-50/60 p-2.5 rounded-2xl border border-amber-200/60 flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-800">時間：</span>
+                  <input 
+                    type="time" 
+                    value={newLogTimeInput}
+                    onChange={(e) => setNewLogTimeInput(e.target.value)}
+                    className="bg-white border border-amber-300 rounded-xl px-2.5 py-1 text-xs font-bold text-amber-900 text-center w-28 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    addDoseLog(confirmModalMed, newLogTimeInput);
+                    setConfirmModalMed(null);
+                  }}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
+                >
+                  <PlusCircle className="w-4 h-4" /> 新增此服藥紀錄 (+1次)
+                </button>
+              </div>
+
+              <div className="pt-1">
+                <button 
+                  onClick={() => setConfirmModalMed(null)}
+                  className="w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition"
+                >
+                  完成 / 關閉
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
+      {/* 新增藥物 Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100">
@@ -701,6 +739,7 @@ export default function App() {
         </div>
       )}
 
+      {/* 編輯藥物 Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100">

@@ -254,24 +254,28 @@ export default function App() {
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
       {/* 置頂 Sticky Header */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-stone-200/60 shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <header className="mb-4">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-500/10 text-amber-600 rounded-2xl">
-              <Cat className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-amber-100/80 border border-amber-200/70 flex items-center justify-center text-xl shadow-xs shrink-0">
+              🐱
             </div>
             <div>
-              <h1 className="font-bold text-base text-stone-900 tracking-tight leading-tight">MeowMed</h1>
-              <p className="text-[10px] font-semibold text-stone-400">人類服藥管家 🐾</p>
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">MeowMed</h1>
+              <p className="text-[11px] text-amber-800/80 font-medium">人類服藥管家 🐾</p>
             </div>
           </div>
+          <FontSizeControl />
+        </div>
 
-          <div className="flex items-center justify-between flex-wrap gap-2 my-2"><button 
-            onClick={openAddModal}
-            className="text-xs bg-stone-900 hover:bg-stone-800 text-white font-bold px-3.5 py-2 rounded-2xl flex items-center gap-1.5 transition shadow-sm active:scale-95"
+        <div className="mt-3">
+          <button
+            onClick={() => openAddModal()}
+            className="w-full bg-gray-900 hover:bg-black text-white py-2.5 px-4 rounded-2xl text-sm font-medium flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> 新增藥物
-          </button><FontSizeControl /></div>
+            <span className="text-base font-bold">+</span>
+            <span>新增藥物</span>
+          </button>
         </div>
       </header>
 

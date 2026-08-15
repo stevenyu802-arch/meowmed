@@ -1,6 +1,6 @@
 import FontSizeControl from "./FontSizeControl";
 import React, { useState, useEffect } from 'react';
-import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, History, X, AlertCircle, Package, PlusCircle, MinusCircle, Sparkles, Download, BellRing, Save } from 'lucide-react';
+import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, History, X, AlertCircle, Package, PlusCircle, RefreshCw, BellRing, Sparkles } from 'lucide-react';
 
 export default function App() {
   const getTodayStr = () => {
@@ -21,7 +21,7 @@ export default function App() {
   };
 
   const [medications, setMedications] = useState(() => {
-    const saved = localStorage.getItem('meowmed_meds_v7');
+    const saved = localStorage.getItem('meowmed_meds_v9');
     return saved ? JSON.parse(saved) : [
       { id: 1, name: '血壓藥 / 慢性病藥', dosage: '1 粒', time: '08:00', stock: 30, notes: '早餐後溫水送服' },
       { id: 2, name: '綜合維他命', dosage: '1 粒', time: '13:00', stock: 15, notes: '午餐後服' },
@@ -30,7 +30,7 @@ export default function App() {
   });
 
   const [historyLogs, setHistoryLogs] = useState(() => {
-    const saved = localStorage.getItem('meowmed_history_v7');
+    const saved = localStorage.getItem('meowmed_history_v9');
     if (!saved) return [];
     const sixtyDaysAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
     return JSON.parse(saved).filter(log => log.timestamp >= sixtyDaysAgo);
@@ -39,32 +39,15 @@ export default function App() {
   const [userName, setUserName] = useState(() => localStorage.getItem('meowmed_username') || '自己');
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [activeTab, setActiveTab] = useState('today');
-
-  const [catAlert, setCatAlert] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    type: 'alert',
-    onConfirm: null
-  });
-
-  const showCatAlert = (message, title = '喵喵提醒 🐾') => {
-    setCatAlert({ isOpen: true, title, message, type: 'alert', onConfirm: null });
-  };
-
-  const showCatConfirm = (message, onConfirm, title = '喵喵確認 🐾') => {
-    setCatAlert({ isOpen: true, title, message, type: 'confirm', onConfirm });
-  };
-
+  
+  // 專屬微型選單與編輯狀態
+  const [activeMenuMedId, setActiveMenuMedId] = useState(null);
+  const [editingLogTarget, setEditingLogTarget] = useState(null); // { logId, timeStr }
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addForm, setAddForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMedId, setEditingMedId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
-
-  const [confirmModalMed, setConfirmModalMed] = useState(null);
-  const [newLogTimeInput, setNewLogTimeInput] = useState('08:00');
 
   const [catMoodIndex, setCatMoodIndex] = useState(0);
   const catQuotes = [
@@ -76,11 +59,11 @@ export default function App() {
   ];
 
   useEffect(() => {
-    localStorage.setItem('meowmed_meds_v7', JSON.stringify(medications));
+    localStorage.setItem('meowmed_meds_v9', JSON.stringify(medications));
   }, [medications]);
 
   useEffect(() => {
-    localStorage.setItem('meowmed_history_v7', JSON.stringify(historyLogs));
+    localStorage.setItem('meowmed_history_v9', JSON.stringify(historyLogs));
   }, [historyLogs]);
 
   useEffect(() => {
@@ -89,7 +72,6 @@ export default function App() {
 
   const handleDateChange = (dateVal) => {
     if (dateVal > getTodayStr()) {
-      showCatAlert("喵！唔可以選擇未到嘅未來日子啊～時間未到呀！🐾", "喵喵時空警告 🐾");
       setSelectedDate(getTodayStr());
     } else {
       setSelectedDate(dateVal);
@@ -100,20 +82,36 @@ export default function App() {
     return historyLogs.filter(log => log.medId === medId && log.date === dateStr);
   };
 
-  const handleMedCheckClick = (med) => {
+  // 1. 極速順滑打卡邏輯（無阻礙 Modal）
+  const toggleQuickLog = (med) => {
     const logs = getTakenLogsOnDate(med.id, selectedDate);
     if (logs.length === 0) {
+      // 未打卡 -> 直接打卡一次（預設用藥物原定時間）
       const now = new Date();
-      addDoseLog(med, now.toTimeString().slice(0, 5));
+      const timeStr = med.time || now.toTimeString().slice(0, 5);
+      const newLog = {
+        id: Date.now(),
+        medId: med.id,
+        medName: med.name,
+        dosage: med.dosage,
+        date: selectedDate,
+        timeStr: timeStr,
+        timestamp: Date.now()
+      };
+      setHistoryLogs(prev => [newLog, ...prev]);
+      setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
     } else {
-      setNewLogTimeInput(new Date().toTimeString().slice(0, 5));
-      setConfirmModalMed(med);
+      // 已打卡 -> 取消最後一次打卡
+      const lastLog = logs[0];
+      setHistoryLogs(prev => prev.filter(l => l.id !== lastLog.id));
+      setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: m.stock + 1 } : m));
     }
   };
 
-  const addDoseLog = (med, customTimeStr = null) => {
+  // 額外加一粒
+  const addExtraDose = (med) => {
     const now = new Date();
-    const timeStr = customTimeStr || now.toTimeString().slice(0, 5);
+    const timeStr = now.toTimeString().slice(0, 5);
     const newLog = {
       id: Date.now(),
       medId: med.id,
@@ -123,20 +121,25 @@ export default function App() {
       timeStr: timeStr,
       timestamp: Date.now()
     };
-
     setHistoryLogs(prev => [newLog, ...prev]);
     setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
+    setActiveMenuMedId(null);
   };
 
-  // UX 核心：修改指定紀錄嘅時間
-  const updateSpecificLogTime = (logId, newTimeStr) => {
-    setHistoryLogs(prev => prev.map(log => log.id === logId ? { ...log, timeStr: newTimeStr } : log));
-  };
-
-  // UX 核心：獨立刪除某一次紀錄
+  // 刪除指定 Log
   const deleteSpecificLog = (logId, medId) => {
-    setHistoryLogs(prev => prev.filter(log => log.id !== logId));
+    setHistoryLogs(prev => prev.filter(l => l.id !== logId));
     setMedications(prev => prev.map(m => m.id === medId ? { ...m, stock: m.stock + 1 } : m));
+    setActiveMenuMedId(null);
+    setEditingLogTarget(null);
+  };
+
+  // 更新特定 Log 時間
+  const saveLogTimeChange = (logId) => {
+    if (!editingLogTarget) return;
+    setHistoryLogs(prev => prev.map(l => l.id === logId ? { ...l, timeStr: editingLogTarget.timeStr } : l));
+    setEditingLogTarget(null);
+    setActiveMenuMedId(null);
   };
 
   const exportToIosCalendar = (med) => {
@@ -177,11 +180,6 @@ export default function App() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-
-    showCatAlert(
-      `已為你生成【${med.name}】嘅日曆檔！喺 iPhone 點擊下載嘅檔案，即可直接新增每日提醒 📅✨`,
-      '喵喵日曆匯出成功 🐾'
-    );
   };
 
   const openAddModal = () => {
@@ -194,9 +192,7 @@ export default function App() {
     if (!addForm.name) return;
     const parsedStock = parseInt(addForm.stock, 10) || 0;
     const newMedItem = { ...addForm, stock: parsedStock, id: Date.now() };
-    
     setMedications(prev => [...prev, newMedItem]);
-    setAddForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
     setIsAddModalOpen(false);
   };
 
@@ -216,21 +212,14 @@ export default function App() {
     e.preventDefault();
     if (!editForm.name) return;
     const parsedStock = parseInt(editForm.stock, 10) || 0;
-    
     setMedications(prev => prev.map(m => m.id === editingMedId ? { ...editForm, stock: parsedStock, id: editingMedId } : m));
-    setEditForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
-    setEditingMedId(null);
     setIsEditModalOpen(false);
   };
 
   const deleteMedication = (med) => {
-    showCatConfirm(
-      `喵～確定要刪除【${med.name}】？刪除咗就記錄唔返㗎啦🐾`,
-      () => {
-        setMedications(prev => prev.filter(m => m.id !== med.id));
-      },
-      '喵喵刪除確認 🐾'
-    );
+    if (window.confirm(`喵～確定要刪除【${med.name}】？`)) {
+      setMedications(prev => prev.filter(m => m.id !== med.id));
+    }
   };
 
   const todayDateStr = getTodayStr();
@@ -239,7 +228,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
-      <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between">
+      {/* 頂部 Header */}
+      <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between max-w-md w-full mx-auto mt-2">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">🐱</span>
           <div>
@@ -247,11 +237,22 @@ export default function App() {
             <p className="text-xs text-amber-800 font-medium mt-1">人類服藥管家 🐾</p>
           </div>
         </div>
-        <FontSizeControl />
+        <div className="flex items-center gap-2">
+          {selectedDate !== getTodayStr() && (
+            <button 
+              onClick={() => setSelectedDate(getTodayStr())}
+              className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition"
+            >
+              <RefreshCw className="w-3 h-3" /> 回到今日
+            </button>
+          )}
+          <FontSizeControl />
+        </div>
       </header>
 
-      <main className="flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-4">
+      <main className="flex-1 max-w-md w-full mx-auto px-4 py-2 space-y-4">
         
+        {/* 貓貓狀態卡片 */}
         <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white rounded-3xl p-5 shadow-lg shadow-amber-600/25 relative overflow-hidden space-y-4">
           <div className="flex justify-between items-start relative z-10">
             <div className="space-y-1">
@@ -268,8 +269,7 @@ export default function App() {
 
             <button 
               onClick={() => setCatMoodIndex((prev) => (prev + 1) % catQuotes.length)}
-              className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner"
-              title="點擊同貓貓互動"
+              className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner cursor-pointer"
             >
               <Cat className="w-6 h-6 text-amber-100" />
               <Sparkles className="w-3.5 h-3.5 text-amber-200 animate-pulse" />
@@ -291,7 +291,8 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-5 mb-2 px-1">
+        {/* 標題與新增按鈕 */}
+        <div className="flex items-center justify-between mt-4 mb-2 px-1">
           <span className="text-xs font-bold text-amber-900/70 tracking-wider">藥物清單管理</span>
           <button
             type="button"
@@ -303,6 +304,7 @@ export default function App() {
           </button>
         </div>
 
+        {/* Tabs 切換 */}
         <div className="flex bg-stone-200/60 p-1 rounded-2xl text-xs font-bold text-stone-600">
           <button 
             onClick={() => setActiveTab('today')}
@@ -324,6 +326,7 @@ export default function App() {
 
         {activeTab === 'today' && (
           <div className="space-y-3.5">
+            {/* 日期選擇卡片 */}
             <div className="bg-white rounded-2xl p-3 border border-stone-200/70 shadow-sm space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
@@ -363,6 +366,7 @@ export default function App() {
               </div>
             </div>
 
+            {/* 藥物列表 */}
             {medications.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center border border-stone-200/60 shadow-sm">
                 <AlertCircle className="w-8 h-8 mx-auto mb-2 text-stone-300" />
@@ -374,38 +378,33 @@ export default function App() {
                 const logs = getTakenLogsOnDate(med.id, selectedDate);
                 const takenCount = logs.length;
                 const isLowStock = med.stock <= 5;
+                const isMenuOpen = activeMenuMedId === med.id;
 
                 return (
                   <div 
                     key={med.id}
-                    className={`bg-white rounded-2xl p-4 border transition-all duration-200 space-y-3 ${
+                    className={`bg-white rounded-2xl p-4 border transition-all duration-200 space-y-3 relative ${
                       takenCount > 0 ? 'border-emerald-200 bg-emerald-50/20' : 'border-stone-200/80 shadow-sm hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1 pr-2">
+                        {/* 1. 極速打卡按鈕 (圓圈) */}
                         <button 
-                          onClick={() => handleMedCheckClick(med)}
-                          className="mt-0.5 transition active:scale-90 relative"
-                          title={takenCount === 0 ? "點擊打剔食藥" : "已打剔，點擊管理/修改服藥時間"}
+                          onClick={() => toggleQuickLog(med)}
+                          className="mt-0.5 transition active:scale-90 relative cursor-pointer"
+                          title="點擊極速打卡／取消"
                         >
                           {takenCount > 0 ? (
-                            <div className="relative">
-                              <CheckCircle2 className="w-6 h-6 text-emerald-500 fill-emerald-100" />
-                              {takenCount > 1 && (
-                                <span className="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full border border-white">
-                                  x{takenCount}
-                                </span>
-                              )}
-                            </div>
+                            <CheckCircle2 className="w-7 h-7 text-emerald-500 fill-emerald-100" />
                           ) : (
-                            <Circle className="w-6 h-6 text-stone-300 hover:text-stone-400" />
+                            <Circle className="w-7 h-7 text-stone-300 hover:text-stone-400" />
                           )}
                         </button>
 
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className={`font-bold text-sm ${takenCount > 0 ? 'text-stone-700' : 'text-stone-800'}`}>
+                            <h3 className="font-bold text-sm text-stone-800">
                               {med.name}
                             </h3>
                             
@@ -414,19 +413,30 @@ export default function App() {
                             }`}>
                               <Package className="w-3 h-3" /> 剩 {med.stock} {isLowStock && '(快完！)'}
                             </span>
-
-                            {takenCount > 0 && (
-                              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                                今日已食 {takenCount} 次
-                              </span>
-                            )}
                           </div>
 
-                          <div className="flex items-center gap-2 text-xs">
+                          <div className="flex items-center gap-2 text-xs flex-wrap">
                             <span className="flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/50">
-                              <Clock className="w-3 h-3 text-amber-600" /> {med.time}
+                              <Clock className="w-3 h-3 text-amber-600" /> 原定 {med.time}
                             </span>
                             <span className="font-medium text-stone-600">{med.dosage}</span>
+                          </div>
+
+                          {/* 2. 精緻狀態標籤：點擊彈出微型選單 */}
+                          <div className="pt-1">
+                            {takenCount > 0 ? (
+                              <button
+                                onClick={() => setActiveMenuMedId(isMenuOpen ? null : med.id)}
+                                className="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-full border border-emerald-300 transition flex items-center gap-1 cursor-pointer shadow-xs"
+                              >
+                                <span>✨ 已服 {takenCount} 次 • {logs[0].timeStr}</span>
+                                <span className="text-[9px] opacity-75">▼ 管理</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-stone-400 font-medium italic">
+                                尚未服藥（點擊左側圓圈即時打卡）
+                              </span>
+                            )}
                           </div>
 
                           {med.notes && (
@@ -438,23 +448,101 @@ export default function App() {
                       <div className="flex items-center gap-0.5">
                         <button 
                           onClick={() => openEditModal(med)}
-                          className="text-stone-400 hover:text-amber-600 p-1.5 transition rounded-xl hover:bg-amber-50"
+                          className="text-stone-400 hover:text-amber-600 p-1.5 transition rounded-xl hover:bg-amber-50 cursor-pointer"
+                          title="編輯藥物設定"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => deleteMedication(med)}
-                          className="text-stone-300 hover:text-rose-500 p-1.5 transition rounded-xl hover:bg-rose-50"
+                          className="text-stone-300 hover:text-rose-500 p-1.5 transition rounded-xl hover:bg-rose-50 cursor-pointer"
+                          title="刪除藥物"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
 
+                    {/* 微型選單面板 (Contextual Menu Popup) */}
+                    {isMenuOpen && (
+                      <div className="bg-stone-50 border border-stone-200 rounded-2xl p-3 mt-3 space-y-3 animate-fadeIn">
+                        <div className="flex justify-between items-center border-b border-stone-200 pb-2">
+                          <span className="text-xs font-bold text-stone-700">📋 管理 【{med.name}】 服藥紀錄</span>
+                          <button onClick={() => setActiveMenuMedId(null)} className="text-stone-400 hover:text-stone-600 p-1">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-2">
+                          {logs.map((log, idx) => (
+                            <div key={log.id} className="bg-white p-2.5 rounded-xl border border-stone-200 flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-stone-600">第 {logs.length - idx} 次</span>
+
+                              {editingLogTarget?.logId === log.id ? (
+                                <div className="flex items-center gap-1">
+                                  <input 
+                                    type="time" 
+                                    value={editingLogTarget.timeStr}
+                                    onChange={(e) => setEditingLogTarget({ ...editingLogTarget, timeStr: e.target.value })}
+                                    className="border border-amber-400 rounded-lg px-2 py-0.5 text-xs font-bold text-center w-24 bg-amber-50"
+                                  />
+                                  <button 
+                                    onClick={() => saveLogTimeChange(log.id)}
+                                    className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg"
+                                  >
+                                    儲存
+                                  </button>
+                                  <button 
+                                    onClick={() => setEditingLogTarget(null)}
+                                    className="bg-stone-200 text-stone-600 text-[10px] font-bold px-2 py-1 rounded-lg"
+                                  >
+                                    取消
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-stone-800 bg-stone-100 px-2 py-0.5 rounded-md">
+                                    {log.timeStr}
+                                  </span>
+                                  <button 
+                                    onClick={() => setEditingLogTarget({ logId: log.id, timeStr: log.timeStr })}
+                                    className="text-xs text-amber-600 hover:underline font-bold px-1"
+                                  >
+                                    ✏️ 改時間
+                                  </button>
+                                  <button 
+                                    onClick={() => deleteSpecificLog(log.id, med.id)}
+                                    className="text-xs text-rose-500 hover:underline font-bold px-1"
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          <button 
+                            onClick={() => addExtraDose(med)}
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 transition shadow-xs"
+                          >
+                            <PlusCircle className="w-3.5 h-3.5" /> ➕ 再加一粒
+                          </button>
+                          <button 
+                            onClick={() => toggleQuickLog(med)}
+                            className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold px-3 py-2 rounded-xl transition"
+                          >
+                            取消最後一次
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="pt-2 border-t border-stone-100 flex justify-end">
                       <button
                         onClick={() => exportToIosCalendar(med)}
-                        className="text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200/60 flex items-center gap-1.5 transition active:scale-95"
+                        className="text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200/60 flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                       >
                         <BellRing className="w-3.5 h-3.5 text-amber-600" />
                         + 加至 iOS 日曆每日提醒 ({med.time})
@@ -502,153 +590,6 @@ export default function App() {
           </div>
         )}
       </main>
-
-      {/* 彈出提示視窗 */}
-      {catAlert.isOpen && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-amber-100 space-y-4">
-            <div className="flex items-center gap-2.5 text-amber-700">
-              <div className="p-2 bg-amber-100 rounded-2xl">
-                <Cat className="w-6 h-6 text-amber-600" />
-              </div>
-              <h3 className="font-bold text-base text-stone-900">{catAlert.title}</h3>
-            </div>
-
-            <p className="text-xs text-stone-600 leading-relaxed font-medium bg-amber-50/50 p-3.5 rounded-2xl border border-amber-100/60">
-              {catAlert.message}
-            </p>
-
-            <div className="flex gap-2 justify-end pt-1">
-              {catAlert.type === 'confirm' ? (
-                <>
-                  <button
-                    onClick={() => setCatAlert({ ...catAlert, isOpen: false })}
-                    className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition"
-                  >
-                    考慮吓先
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (catAlert.onConfirm) catAlert.onConfirm();
-                      setCatAlert({ ...catAlert, isOpen: false });
-                    }}
-                    className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition"
-                  >
-                    確定刪除 🐾
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setCatAlert({ ...catAlert, isOpen: false })}
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition"
-                >
-                  我知道啦 🐾
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 重點升級：全新 UX 服藥紀錄與時間微調 Modal */}
-      {confirmModalMed && (() => {
-        const currentDateLogs = getTakenLogsOnDate(confirmModalMed.id, selectedDate);
-
-        return (
-          <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4 border border-stone-100 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center border-b border-stone-100 pb-3">
-                <h3 className="font-bold text-base text-stone-900 flex items-center gap-1.5">
-                  <Cat className="w-5 h-5 text-amber-600" /> 服藥時間管理
-                </h3>
-                <button onClick={() => setConfirmModalMed(null)} className="text-stone-400 hover:text-stone-600 p-1">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-1 text-stone-700 text-sm">
-                <p className="font-bold text-amber-700 text-base">{confirmModalMed.name}</p>
-                <p className="text-xs text-stone-500 font-medium">
-                  日期：<span className="font-bold text-stone-800">{selectedDate}</span> （已記錄 <span className="font-bold text-emerald-600">{currentDateLogs.length} 次</span>）
-                </p>
-              </div>
-
-              {/* 1. 已有紀錄列表：可直接改時間 / 單獨刪除 */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-stone-600">已記錄嘅服藥時間 (可直接修改)：</label>
-                {currentDateLogs.length === 0 ? (
-                  <p className="text-xs text-stone-400 italic">今日暫時未有紀錄</p>
-                ) : (
-                  currentDateLogs.map((log, idx) => (
-                    <div key={log.id} className="bg-stone-50 p-2.5 rounded-2xl border border-stone-200/70 flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-stone-600 shrink-0">
-                        第 {currentDateLogs.length - idx} 次：
-                      </span>
-                      
-                      {/* 直接修改特定紀錄的時間 */}
-                      <input 
-                        type="time" 
-                        value={log.timeStr}
-                        onChange={(e) => updateSpecificLogTime(log.id, e.target.value)}
-                        className="bg-white border border-stone-300 rounded-xl px-2.5 py-1 text-xs font-bold text-stone-800 text-center w-28 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      />
-
-                      {/* 獨立刪除該條紀錄 */}
-                      <button 
-                        onClick={() => {
-                          deleteSpecificLog(log.id, confirmModalMed.id);
-                          if (currentDateLogs.length <= 1) {
-                            setConfirmModalMed(null);
-                          }
-                        }}
-                        className="text-stone-400 hover:text-rose-500 p-1.5 transition rounded-lg hover:bg-rose-50"
-                        title="刪除呢次紀錄"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <hr className="border-stone-100 my-2" />
-
-              {/* 2. 補 Mark 多一次區塊 */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-stone-600">補 Mark 多一次：</label>
-                <div className="bg-amber-50/60 p-2.5 rounded-2xl border border-amber-200/60 flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-800">時間：</span>
-                  <input 
-                    type="time" 
-                    value={newLogTimeInput}
-                    onChange={(e) => setNewLogTimeInput(e.target.value)}
-                    className="bg-white border border-amber-300 rounded-xl px-2.5 py-1 text-xs font-bold text-amber-900 text-center w-28 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-                
-                <button 
-                  onClick={() => {
-                    addDoseLog(confirmModalMed, newLogTimeInput);
-                    setConfirmModalMed(null);
-                  }}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
-                >
-                  <PlusCircle className="w-4 h-4" /> 新增此服藥紀錄 (+1次)
-                </button>
-              </div>
-
-              <div className="pt-1">
-                <button 
-                  onClick={() => setConfirmModalMed(null)}
-                  className="w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition"
-                >
-                  完成 / 關閉
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* 新增藥物 Modal */}
       {isAddModalOpen && (
@@ -729,7 +670,7 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer"
                 >
                   確定新增
                 </button>
@@ -818,7 +759,7 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer"
                 >
                   儲存修改
                 </button>

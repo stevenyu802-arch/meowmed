@@ -266,12 +266,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between flex-wrap gap-2 my-2"><button 
-            onClick={openAddModal}
-            className="text-xs bg-stone-900 hover:bg-stone-800 text-white font-bold px-3.5 py-2 rounded-2xl flex items-center gap-1.5 transition shadow-sm active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> 新增藥物
-          </button><FontSizeControl /></div>
+          <div className="flex items-center gap-2 shrink-0"><FontSizeControl /><button
         </div>
       </header>
 

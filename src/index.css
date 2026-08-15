@@ -15,3 +15,30 @@ div[class*="modal"] input, div[class*="modal"] select, div[class*="modal"] texta
   max-width: 100% !important;
   width: 100% !important;
 }
+
+/* 強制鎖死 iOS Safari 時間輸入框與 Grid 雙欄邊界，防止凸出 Modal */
+.modal-content input[type="time"],
+[role="dialog"] input[type="time"],
+div[class*="modal"] input[type="time"] {
+  -webkit-appearance: none !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  display: block !important;
+}
+
+/* 確保 Grid 子容器不會被內容撐爆 */
+.modal-content .grid,
+[role="dialog"] .grid,
+div[class*="modal"] .grid {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.modal-content .grid > div,
+[role="dialog"] .grid > div,
+div[class*="modal"] .grid > div {
+  min-width: 0 !important;
+  width: 100% !important;
+}

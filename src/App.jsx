@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, History, X, AlertCircle, Package, PlusCircle, MinusCircle, Sparkles, Download, BellRing } from 'lucide-react';
 
 export default function App() {
-  // 香港時間 (HKT) 日期格式化 Helper
   const getTodayStr = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -21,9 +20,8 @@ export default function App() {
     return `${year}-${month}-${day}`;
   };
 
-  // 1. 藥物庫存與清單
   const [medications, setMedications] = useState(() => {
-    const saved = localStorage.getItem('meowmed_meds');
+    const saved = localStorage.getItem('meowmed_meds_v7');
     return saved ? JSON.parse(saved) : [
       { id: 1, name: '血壓藥 / 慢性病藥', dosage: '1 粒', time: '08:00', stock: 30, notes: '早餐後溫水送服' },
       { id: 2, name: '綜合維他命', dosage: '1 粒', time: '13:00', stock: 15, notes: '午餐後服' },
@@ -31,25 +29,22 @@ export default function App() {
     ];
   });
 
-  // 2. 歷史 Log (自動保留 60 日)
   const [historyLogs, setHistoryLogs] = useState(() => {
-    const saved = localStorage.getItem('meowmed_history');
+    const saved = localStorage.getItem('meowmed_history_v7');
     if (!saved) return [];
     const sixtyDaysAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
     return JSON.parse(saved).filter(log => log.timestamp >= sixtyDaysAgo);
   });
 
-  // 3. 狀態控制
   const [userName, setUserName] = useState(() => localStorage.getItem('meowmed_username') || '自己');
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [activeTab, setActiveTab] = useState('today');
 
-  // 自訂貓貓 Modal / Alert 狀態（代替原生 alert/confirm，絕不顯示 GitHub Domain）
   const [catAlert, setCatAlert] = useState({
     isOpen: false,
     title: '',
     message: '',
-    type: 'alert', // 'alert' | 'confirm'
+    type: 'alert',
     onConfirm: null
   });
 
@@ -61,15 +56,15 @@ export default function App() {
     setCatAlert({ isOpen: true, title, message, type: 'confirm', onConfirm });
   };
 
-  // Modal 狀態
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
 
-  // 追加 / 扣減服藥彈窗狀態
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMedId, setEditingMedId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
+
   const [confirmModalMed, setConfirmModalMed] = useState(null);
 
-  // 貓貓互動對白與表情
   const [catMoodIndex, setCatMoodIndex] = useState(0);
   const catQuotes = [
     "喵～記得按時食藥，乖乖照顧好自己哦！🐾",
@@ -79,22 +74,18 @@ export default function App() {
     "喵～可以點擊「+ iOS 日曆」加入手機定時提醒啊！📅"
   ];
 
-  // 儲存 LocalStorage
   useEffect(() => {
-    localStorage.setItem('meowmed_meds', JSON.stringify(medications));
+    localStorage.setItem('meowmed_meds_v7', JSON.stringify(medications));
   }, [medications]);
 
   useEffect(() => {
-    const sixtyDaysAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
-    const validLogs = historyLogs.filter(log => log.timestamp >= sixtyDaysAgo);
-    localStorage.setItem('meowmed_history', JSON.stringify(validLogs));
+    localStorage.setItem('meowmed_history_v7', JSON.stringify(historyLogs));
   }, [historyLogs]);
 
   useEffect(() => {
     localStorage.setItem('meowmed_username', userName);
   }, [userName]);
 
-  // 防 Future 未來日子選擇（改用貓貓警告）
   const handleDateChange = (dateVal) => {
     if (dateVal > getTodayStr()) {
       showCatAlert("喵！唔可以選擇未到嘅未來日子啊～時間未到呀！🐾", "喵喵時空警告 🐾");
@@ -104,12 +95,10 @@ export default function App() {
     }
   };
 
-  // 計算某藥物在某日期的服用次數
   const getTakenLogsOnDate = (medId, dateStr) => {
     return historyLogs.filter(log => log.medId === medId && log.date === dateStr);
   };
 
-  // 打勾 / 追加 / 扣減服藥邏輯
   const handleMedCheckClick = (med) => {
     const logs = getTakenLogsOnDate(med.id, selectedDate);
     if (logs.length > 0) {
@@ -136,7 +125,6 @@ export default function App() {
     setMedications(medications.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
     setConfirmModalMed(null);
 
-    // Mark 完歷史日子，自動跳返去「今日」
     if (selectedDate !== getTodayStr()) {
       setSelectedDate(getTodayStr());
     }
@@ -156,14 +144,12 @@ export default function App() {
     }
   };
 
-  // 📅 匯出 iOS / 系統日曆 (.ics) 提醒
   const exportToIosCalendar = (med) => {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const [hours, minutes] = (med.time || '08:00').split(':');
-
     const dtStart = `${year}${month}${day}T${hours.padStart(2, '0')}${minutes.padStart(2, '0')}00`;
 
     const icsContent = [
@@ -203,57 +189,65 @@ export default function App() {
     );
   };
 
-  // 開啟 / 編輯 Modal
   const openAddModal = () => {
-    setEditingId(null);
-    setFormData({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
-    setIsModalOpen(true);
+    setAddForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
+    setIsAddModalOpen(true);
+  };
+
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    if (!addForm.name) return;
+    const parsedStock = parseInt(addForm.stock, 10) || 0;
+    const newMedItem = { ...addForm, stock: parsedStock, id: Date.now() };
+    
+    // 直接更新 React State，確保畫面即時反應
+    setMedications(prev => [...prev, newMedItem]);
+    // 徹底重設表格並安全關閉 Modal
+    setAddForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
+    setIsAddModalOpen(false);
   };
 
   const openEditModal = (med) => {
-    setEditingId(med.id);
-    setFormData({
+    setEditingMedId(med.id);
+    setEditForm({
       name: med.name,
       dosage: med.dosage,
       time: med.time,
       stock: med.stock !== undefined ? med.stock : 30,
       notes: med.notes || ''
     });
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
-  const handleFormSubmit = (e) => {
+  const handleEditSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name) return;
-    const parsedStock = parseInt(formData.stock, 10) || 0;
-
-    if (editingId) {
-      setMedications(medications.map(m => m.id === editingId ? { ...formData, stock: parsedStock, id: editingId } : m));
-    } else {
-      setMedications([...medications, { ...formData, stock: parsedStock, id: Date.now() }]);
-    }
-    setIsModalOpen(false);
+    if (!editForm.name) return;
+    const parsedStock = parseInt(editForm.stock, 10) || 0;
+    
+    // 直接更新 React State
+    setMedications(prev => prev.map(m => m.id === editingMedId ? { ...editForm, stock: parsedStock, id: editingMedId } : m));
+    // 徹底清空編輯表單並安全關閉 Modal
+    setEditForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
+    setEditingMedId(null);
+    setIsEditModalOpen(false);
   };
 
-  // 刪除藥物（改用貓貓確認框）
   const deleteMedication = (med) => {
     showCatConfirm(
       `喵～確定要刪除【${med.name}】？刪除咗就記錄唔返㗎啦🐾`,
       () => {
-        setMedications(medications.filter(m => m.id !== med.id));
+        setMedications(prev => prev.filter(m => m.id !== med.id));
       },
       '喵喵刪除確認 🐾'
     );
   };
 
-  // 統計今日進度
   const todayDateStr = getTodayStr();
   const completedCount = medications.filter(m => getTakenLogsOnDate(m.id, todayDateStr).length > 0).length;
 
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
-      {/* 置頂 Sticky Header */}
       <header className="bg-white/90 backdrop-blur border border-amber-100/80 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">🐱</span>
@@ -265,10 +259,8 @@ export default function App() {
         <FontSizeControl />
       </header>
 
-      {/* 主要內容區域 */}
       <main className="flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-4">
         
-        {/* 服藥者與貓貓 Mascot 卡片 */}
         <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white rounded-3xl p-5 shadow-lg shadow-amber-600/20 relative overflow-hidden space-y-4">
           <div className="flex justify-between items-start relative z-10">
             <div className="space-y-1">
@@ -284,22 +276,7 @@ export default function App() {
             </div>
 
             <button 
-              onClick={() => {
-          if (typeof setEditingMed === "function") setEditingMed(null);
-          if (typeof setEditingId === "function") setEditingId(null);
-          if (typeof setFormData === "function") setFormData({
-  name: "",
-  dosage: "",
-  time: "08:00",
-  frequency: "daily",
-  note: "",
-  stock: ""
-});
-if (typeof setShowAddModal === "function") {
-  setFormData({ name: "", dosage: "", time: "08:00", frequency: "daily", note: "", stock: "" });
-  setShowAddModal(true);
-} else if (typeof setShowModal === "function")setShowModal(true);
-        }}
+              onClick={() => setCatMoodIndex((prev) => (prev + 1) % catQuotes.length)}
               className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner"
               title="點擊同貓貓互動"
             >
@@ -323,21 +300,19 @@ if (typeof setShowAddModal === "function") {
           </div>
         </div>
 
-        {/* Tab 頁籤 */}
-        
+        <div className="flex items-center justify-between mt-5 mb-2 px-1">
+          <span className="text-xs font-bold text-amber-900/70 tracking-wider">藥物清單管理</span>
+          <button
+            type="button"
+            onClick={openAddModal}
+            className="bg-[#5C3A21] hover:bg-[#4A2E1A] active:scale-95 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
+          >
+            <span className="text-sm font-bold leading-none">+</span>
+            <span>新增藥物</span>
+          </button>
+        </div>
 
-<div className="flex items-center justify-between mt-5 mb-2 px-1">
-        <span className="text-xs font-bold text-amber-900/70 tracking-wider">藥物清單管理</span>
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#5C3A21] hover:bg-[#4A2E1A] active:scale-95 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
-        >
-          <span className="text-sm font-bold leading-none">+</span>
-          <span>新增藥物</span>
-        </button>
-      </div>
-<div className="flex bg-stone-200/60 p-1 rounded-2xl text-xs font-bold text-stone-600">
+        <div className="flex bg-stone-200/60 p-1 rounded-2xl text-xs font-bold text-stone-600">
           <button 
             onClick={() => setActiveTab('today')}
             className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${
@@ -356,11 +331,8 @@ if (typeof setShowAddModal === "function") {
           </button>
         </div>
 
-        {/* TAB 1: 服藥 Checklist */}
         {activeTab === 'today' && (
           <div className="space-y-3.5">
-            
-            {/* 日期選擇器與 Shortcut */}
             <div className="bg-white rounded-2xl p-3 border border-stone-200/70 shadow-sm space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
@@ -400,7 +372,6 @@ if (typeof setShowAddModal === "function") {
               </div>
             </div>
 
-            {/* 藥物清單 */}
             {medications.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center border border-stone-200/60 shadow-sm">
                 <AlertCircle className="w-8 h-8 mx-auto mb-2 text-stone-300" />
@@ -422,7 +393,6 @@ if (typeof setShowAddModal === "function") {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1 pr-2">
-                        {/* 打勾按鈕 */}
                         <button 
                           onClick={() => handleMedCheckClick(med)}
                           className="mt-0.5 transition active:scale-90 relative"
@@ -473,7 +443,6 @@ if (typeof setShowAddModal === "function") {
                         </div>
                       </div>
 
-                      {/* 編輯與刪除 */}
                       <div className="flex items-center gap-0.5">
                         <button 
                           onClick={() => openEditModal(med)}
@@ -490,7 +459,6 @@ if (typeof setShowAddModal === "function") {
                       </div>
                     </div>
 
-                    {/* ✨ 匯入 iOS 日曆按鈕（用戶可自主選擇） */}
                     <div className="pt-2 border-t border-stone-100 flex justify-end">
                       <button
                         onClick={() => exportToIosCalendar(med)}
@@ -507,7 +475,6 @@ if (typeof setShowAddModal === "function") {
           </div>
         )}
 
-        {/* TAB 2: 歷史 Log */}
         {activeTab === 'history' && (
           <div className="space-y-3">
             <div className="flex justify-between items-center px-1">
@@ -544,9 +511,8 @@ if (typeof setShowAddModal === "function") {
         )}
       </main>
 
-      {/* 🐾 全局貓貓主題 Alert / Confirm Modal（代替原生 alert，無 GitHub domain） */}
       {catAlert.isOpen && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-amber-100 space-y-4">
             <div className="flex items-center gap-2.5 text-amber-700">
               <div className="p-2 bg-amber-100 rounded-2xl">
@@ -591,7 +557,6 @@ if (typeof setShowAddModal === "function") {
         </div>
       )}
 
-      {/* 彈窗：追加 / 扣減服藥紀錄 */}
       {confirmModalMed && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4 border border-stone-100">
@@ -610,7 +575,6 @@ if (typeof setShowAddModal === "function") {
                 你在 <span className="font-bold">{selectedDate}</span> 已經記錄過服用這款藥物 
                 <span className="font-bold text-emerald-600"> ({getTakenLogsOnDate(confirmModalMed.id, selectedDate).length} 次)</span>。
               </p>
-              <p className="text-xs text-stone-600 pt-1">如果需要一日食多次（例如醫生指示追加一粒），可以點擊追加：</p>
             </div>
 
             <div className="space-y-2 pt-2">
@@ -637,28 +601,25 @@ if (typeof setShowAddModal === "function") {
         </div>
       )}
 
-      {/* 彈窗：新增 / 編輯 Modal */}
-      {isModalOpen && (
+      {isAddModalOpen && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
-              <h3 className="font-bold text-base text-stone-900">
-                {editingId ? '編輯藥物資料與庫存' : '新增藥物提醒'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1">
+              <h3 className="font-bold text-base text-stone-900">新增藥物提醒</h3>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-3.5">
+            <form onSubmit={handleAddSubmit} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-bold text-stone-500 mb-1">藥物名稱</label>
                 <input
                   type="text"
                   required
                   placeholder="例如：降血壓藥 / 維他命C"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={addForm.name}
+                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                   className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
@@ -669,8 +630,8 @@ if (typeof setShowAddModal === "function") {
                   <input
                     type="text"
                     placeholder="例如：1 粒 / 10ml"
-                    value={formData.dosage}
-                    onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
+                    value={addForm.dosage}
+                    onChange={(e) => setAddForm({ ...addForm, dosage: e.target.value })}
                     className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                   />
                 </div>
@@ -678,8 +639,8 @@ if (typeof setShowAddModal === "function") {
                   <label className="block text-xs font-bold text-stone-500 mb-1">預設服藥時間</label>
                   <input
                     type="time"
-                    value={formData.time}
-                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    value={addForm.time}
+                    onChange={(e) => setAddForm({ ...addForm, time: e.target.value })}
                     className="w-full border border-stone-200 rounded-xl p-2.5 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
                   />
                 </div>
@@ -691,8 +652,8 @@ if (typeof setShowAddModal === "function") {
                   type="number"
                   min="0"
                   placeholder="例如：30"
-                  value={formData.stock}
-                  onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                  value={addForm.stock}
+                  onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
                   className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
@@ -702,8 +663,8 @@ if (typeof setShowAddModal === "function") {
                 <input
                   type="text"
                   placeholder="例如：餐後服用 / 溫水送服"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  value={addForm.notes}
+                  onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
                   className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
@@ -711,7 +672,7 @@ if (typeof setShowAddModal === "function") {
               <div className="flex gap-2.5 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setIsAddModalOpen(false)}
                   className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition"
                 >
                   取消
@@ -720,7 +681,95 @@ if (typeof setShowAddModal === "function") {
                   type="submit"
                   className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition"
                 >
-                  {editingId ? '儲存修改' : '確定新增'}
+                  確定新增
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100">
+            <div className="flex justify-between items-center border-b border-stone-100 pb-3">
+              <h3 className="font-bold text-base text-stone-900">編輯藥物資料與庫存</h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-stone-500 mb-1">藥物名稱</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="例如：降血壓藥 / 維他命C"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 items-center">
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 mb-1">每次服用劑量</label>
+                  <input
+                    type="text"
+                    placeholder="例如：1 粒 / 10ml"
+                    value={editForm.dosage}
+                    onChange={(e) => setEditForm({ ...editForm, dosage: e.target.value })}
+                    className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 mb-1">預設服藥時間</label>
+                  <input
+                    type="time"
+                    value={editForm.time}
+                    onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                    className="w-full border border-stone-200 rounded-xl p-2.5 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-500 mb-1">目前剩餘數量 (庫存粒數)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="例如：30"
+                  value={editForm.stock}
+                  onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-500 mb-1">備註 / 服用指示</label>
+                <input
+                  type="text"
+                  placeholder="例如：餐後服用 / 溫水送服"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                />
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition"
+                >
+                  儲存修改
                 </button>
               </div>
             </form>

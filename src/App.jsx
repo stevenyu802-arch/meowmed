@@ -1,8 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, RotateCcw, History, Check, X, AlertCircle, Package } from 'lucide-react';
+import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, History, X, AlertCircle, Package, PlusCircle, MinusCircle, Sparkles } from 'lucide-react';
 
 export default function App() {
-  // 1. 藥物基本資料（含剩餘數量 stock）
+  // 香港時間 (HKT) 日期格式化 Helper
+  const getTodayStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateStr = (daysAgo) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 1. 藥物庫存與清單
   const [medications, setMedications] = useState(() => {
     const saved = localStorage.getItem('meowmed_meds');
     return saved ? JSON.parse(saved) : [
@@ -12,34 +30,43 @@ export default function App() {
     ];
   });
 
-  // 2. 歷來紀錄 History Logs
+  // 2. 歷史 Log (自動保留 60 日)
   const [historyLogs, setHistoryLogs] = useState(() => {
     const saved = localStorage.getItem('meowmed_history');
     if (!saved) return [];
-    
-    // 自動清理超過 60 日（2個月）嘅舊紀錄
     const sixtyDaysAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
-    const parsed = JSON.parse(saved);
-    return parsed.filter(log => log.timestamp >= sixtyDaysAgo);
+    return JSON.parse(saved).filter(log => log.timestamp >= sixtyDaysAgo);
   });
 
-  // 3. 服藥者名稱與日期選擇
+  // 3. 狀態控制
   const [userName, setUserName] = useState(() => localStorage.getItem('meowmed_username') || '自己');
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [activeTab, setActiveTab] = useState('today'); // 'today' | 'history'
+  const [selectedDate, setSelectedDate] = useState(getTodayStr());
+  const [activeTab, setActiveTab] = useState('today');
 
-  // 4. Modal 控制（新增 / 編輯）
+  // Modal 狀態
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', dosage: '', time: '08:00', stock: 30, notes: '' });
+  const [formData, setFormData] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
 
-  // 儲存至 LocalStorage
+  // 追加 / 扣減服藥彈窗狀態
+  const [confirmModalMed, setConfirmModalMed] = useState(null);
+
+  // 貓貓互動對白與表情
+  const [catMoodIndex, setCatMoodIndex] = useState(0);
+  const catQuotes = [
+    "喵～記得按時食藥，乖乖照顧好自己哦！🐾",
+    "喵！有按時食藥嘅主人最精靈！✨",
+    "喵～今日飲咗足夠嘅溫水未呀？💧",
+    "喵嗚～要隨時留意藥物庫存，冇藥要早啲補！📦",
+    "喵～需要喵喵幫你記住服藥時間嗎？⏰"
+  ];
+
+  // 儲存 LocalStorage
   useEffect(() => {
     localStorage.setItem('meowmed_meds', JSON.stringify(medications));
   }, [medications]);
 
   useEffect(() => {
-    // 每次更新時確保過濾掉 60 日前嘅紀錄
     const sixtyDaysAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
     const validLogs = historyLogs.filter(log => log.timestamp >= sixtyDaysAgo);
     localStorage.setItem('meowmed_history', JSON.stringify(validLogs));
@@ -49,148 +76,186 @@ export default function App() {
     localStorage.setItem('meowmed_username', userName);
   }, [userName]);
 
-  // 開啟「新增」Modal
+  // 防 Future 未來日子選擇
+  const handleDateChange = (dateVal) => {
+    if (dateVal > getTodayStr()) {
+      alert("喵！唔可以選擇未到嘅未來日子啊～");
+      setSelectedDate(getTodayStr());
+    } else {
+      setSelectedDate(dateVal);
+    }
+  };
+
+  // 計算某藥物在某日期的服用次數
+  const getTakenLogsOnDate = (medId, dateStr) => {
+    return historyLogs.filter(log => log.medId === medId && log.date === dateStr);
+  };
+
+  // 打勾 / 追加 / 扣減服藥邏輯
+  const handleMedCheckClick = (med) => {
+    const logs = getTakenLogsOnDate(med.id, selectedDate);
+    if (logs.length > 0) {
+      // 已經食過：跳出 Modal 詢問追加還是扣減
+      setConfirmModalMed(med);
+    } else {
+      // 未食過：直接增加一次紀錄
+      addDoseLog(med);
+    }
+  };
+
+  const addDoseLog = (med) => {
+    const now = new Date();
+    const timeStr = now.toTimeString().slice(0, 5);
+    const newLog = {
+      id: Date.now(),
+      medId: med.id,
+      medName: med.name,
+      dosage: med.dosage,
+      date: selectedDate,
+      timeStr: timeStr,
+      timestamp: Date.now()
+    };
+
+    setHistoryLogs([newLog, ...historyLogs]);
+    setMedications(medications.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
+    setConfirmModalMed(null);
+
+    // ✨ 重要功能：如果 Mark 緊歷史日子 (舊日子)，Mark 完自動重置日期跳返去「今日」！
+    if (selectedDate !== getTodayStr()) {
+      setSelectedDate(getTodayStr());
+    }
+  };
+
+  const removeOneDoseLog = (med) => {
+    const logs = getTakenLogsOnDate(med.id, selectedDate);
+    if (logs.length === 0) return;
+
+    // 移除最新嗰一筆 log
+    const lastLogId = logs[0].id;
+    setHistoryLogs(historyLogs.filter(log => log.id !== lastLogId));
+    setMedications(medications.map(m => m.id === med.id ? { ...m, stock: m.stock + 1 } : m));
+    setConfirmModalMed(null);
+
+    // ✨ Mark 完歷史日子扣減後，同樣自動跳返去「今日」
+    if (selectedDate !== getTodayStr()) {
+      setSelectedDate(getTodayStr());
+    }
+  };
+
+  // 開啟 / 編輯 Modal
   const openAddModal = () => {
     setEditingId(null);
-    setFormData({ name: '', dosage: '', time: '09:00', stock: 30, notes: '' });
+    setFormData({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
     setIsModalOpen(true);
   };
 
-  // 開啟「編輯」Modal
   const openEditModal = (med) => {
     setEditingId(med.id);
-    setFormData({ 
-      name: med.name, 
-      dosage: med.dosage, 
-      time: med.time, 
-      stock: med.stock !== undefined ? med.stock : 30, 
-      notes: med.notes || '' 
+    setFormData({
+      name: med.name,
+      dosage: med.dosage,
+      time: med.time,
+      stock: med.stock !== undefined ? med.stock : 30,
+      notes: med.notes || ''
     });
     setIsModalOpen(true);
   };
 
-  // 提交表格（新增/編輯）
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (!formData.name) return;
-
     const parsedStock = parseInt(formData.stock, 10) || 0;
 
     if (editingId) {
       setMedications(medications.map(m => m.id === editingId ? { ...formData, stock: parsedStock, id: editingId } : m));
     } else {
-      const newMed = { ...formData, stock: parsedStock, id: Date.now() };
-      setMedications([...medications, newMed]);
+      setMedications([...medications, { ...formData, stock: parsedStock, id: Date.now() }]);
     }
     setIsModalOpen(false);
   };
 
-  // 刪除藥物
   const deleteMedication = (id) => {
     if (window.confirm('確定要刪除這款藥物？')) {
       setMedications(medications.filter(m => m.id !== id));
     }
   };
 
-  // 檢查選定日期某藥物是否已食
-  const isTakenOnDate = (medId, dateStr) => {
-    return historyLogs.some(log => log.medId === medId && log.date === dateStr);
-  };
-
-  // 切換服藥狀態（支援補 Mark 返前一兩日）
-  const toggleTakenForDate = (med) => {
-    const alreadyTaken = isTakenOnDate(med.id, selectedDate);
-
-    if (alreadyTaken) {
-      // 取消 Mark：移除該日紀錄 + 補回 1 個庫存
-      setHistoryLogs(historyLogs.filter(log => !(log.medId === med.id && log.date === selectedDate)));
-      setMedications(medications.map(m => m.id === med.id ? { ...m, stock: m.stock + 1 } : m));
-    } else {
-      // Mark 已食：新增 Log + 扣減 1 個庫存
-      const now = new Date();
-      const timeStr = now.toTimeString().slice(0, 5); // HH:mm
-      
-      const newLog = {
-        id: Date.now(),
-        medId: med.id,
-        medName: med.name,
-        dosage: med.dosage,
-        date: selectedDate, // 選定嘅日期（可補 Mark 舊日子）
-        timeStr: timeStr,
-        timestamp: Date.now()
-      };
-
-      setHistoryLogs([newLog, ...historyLogs]);
-      setMedications(medications.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
-    }
-  };
-
-  // 快捷切換日期 (今天 / 昨天 / 前天)
-  const setQuickDate = (daysAgo) => {
-    const d = new Date();
-    d.setDate(d.getDate() - daysAgo);
-    setSelectedDate(d.toISOString().split('T')[0]);
-  };
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  const completedTodayCount = medications.filter(m => isTakenOnDate(m.id, selectedDate)).length;
+  // 統計今日進度
+  const todayDateStr = getTodayStr();
+  const completedCount = medications.filter(m => getTakenLogsOnDate(m.id, todayDateStr).length > 0).length;
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-stone-800 flex flex-col font-sans antialiased">
+    <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
-      {/* 頂部 Sticky Header（修復置頂遮擋 BUG） */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
+      {/* 置頂 Sticky Header */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-stone-200/60 shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-amber-500/10 text-amber-600 rounded-2xl">
-              <Cat className="w-6 h-6" />
+              <Cat className="w-5 h-5" />
             </div>
             <div>
               <h1 className="font-bold text-base text-stone-900 tracking-tight leading-tight">MeowMed</h1>
-              <p className="text-[11px] font-medium text-stone-400">人類服藥管家 🐾</p>
+              <p className="text-[10px] font-semibold text-stone-400">人類服藥管家 🐾</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <button 
-              onClick={openAddModal}
-              className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition shadow-sm active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5" /> 新增藥物
-            </button>
-          </div>
+          <button 
+            onClick={openAddModal}
+            className="text-xs bg-stone-900 hover:bg-stone-800 text-white font-bold px-3.5 py-2 rounded-2xl flex items-center gap-1.5 transition shadow-sm active:scale-95"
+          >
+            <Plus className="w-4 h-4" /> 新增藥物
+          </button>
         </div>
       </header>
 
-      {/* 主要內容區塊（使用 flex-1 確保 Layout 不重疊） */}
+      {/* 主要內容區域 */}
       <main className="flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-4">
         
-        {/* 個人與進度卡片 */}
-        <div className="bg-gradient-to-br from-amber-600 to-amber-700 text-white rounded-3xl p-5 shadow-lg shadow-amber-600/15 relative overflow-hidden">
-          <div className="relative z-10 flex justify-between items-start">
+        {/* 現代化卡片：服藥者與貓貓互動 Mascot */}
+        <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white rounded-3xl p-5 shadow-lg shadow-amber-600/20 relative overflow-hidden space-y-4">
+          <div className="flex justify-between items-start relative z-10">
             <div className="space-y-1">
-              <span className="text-amber-200/90 text-[11px] font-bold tracking-wider uppercase">服藥者名字</span>
+              <span className="text-amber-200/90 text-[10px] font-bold tracking-wider uppercase">服藥者名字</span>
               <div>
                 <input 
                   type="text" 
                   value={userName} 
                   onChange={(e) => setUserName(e.target.value)}
-                  className="bg-transparent text-xl font-black focus:outline-none border-b border-amber-300/40 pb-0.5 w-36 tracking-tight text-white"
+                  className="bg-transparent text-xl font-black focus:outline-none border-b border-amber-300/40 pb-0.5 w-32 tracking-tight text-white"
                 />
               </div>
-              <p className="text-amber-100/90 text-xs pt-1.5 flex items-center gap-1 font-medium">
-                <Heart className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                所選日期已完成：{completedTodayCount} / {medications.length} 款
-              </p>
             </div>
-            <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner">
-              <Pill className="w-6 h-6 text-amber-100" />
-            </div>
+
+            {/* 互動貓貓按鈕 */}
+            <button 
+              onClick={() => setCatMoodIndex((catMoodIndex + 1) % catQuotes.length)}
+              className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner"
+              title="點擊同貓貓互動"
+            >
+              <Cat className="w-6 h-6 text-amber-100" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-200 animate-pulse" />
+            </button>
+          </div>
+
+          {/* 貓貓動態對白 */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 flex items-center gap-2 text-xs text-amber-50 font-medium">
+            <span>{catQuotes[catMoodIndex]}</span>
+          </div>
+
+          <div className="pt-1 flex items-center justify-between text-xs text-amber-100 font-semibold border-t border-amber-400/30">
+            <span className="flex items-center gap-1">
+              <Heart className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+              今日進度：{completedCount} / {medications.length} 款
+            </span>
+            <span className="text-[11px] bg-amber-800/30 px-2 py-0.5 rounded-lg border border-amber-400/20">
+              {completedCount === medications.length && medications.length > 0 ? '✨ 今日全部完成！' : '加油按時服藥'}
+            </span>
           </div>
         </div>
 
-        {/* Tab 頁籤：今日清單 / 歷來 Log */}
-        <div className="flex bg-stone-200/70 p-1 rounded-2xl text-xs font-bold text-stone-600">
+        {/* Tab 頁籤 */}
+        <div className="flex bg-stone-200/60 p-1 rounded-2xl text-xs font-bold text-stone-600">
           <button 
             onClick={() => setActiveTab('today')}
             className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${
@@ -209,47 +274,48 @@ export default function App() {
           </button>
         </div>
 
-        {/* TAB 1: 服藥 Checklist (可切換日期與補 Mark) */}
+        {/* TAB 1: 服藥 Checklist */}
         {activeTab === 'today' && (
           <div className="space-y-3.5">
             
-            {/* 日期選擇器與補 Mark 選項 */}
-            <div className="bg-white rounded-2xl p-3 border border-stone-200/70 shadow-sm space-y-2">
+            {/* 日期選擇器與 3 個快捷按鈕 (著燈修復) */}
+            <div className="bg-white rounded-2xl p-3 border border-stone-200/70 shadow-sm space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-amber-600" /> 檢視/補打勾日期：
+                  <Calendar className="w-3.5 h-3.5 text-amber-600" /> 檢視/補Mark日期：
                 </span>
                 <input 
                   type="date" 
                   value={selectedDate}
-                  max={todayStr}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  max={getTodayStr()}
+                  onChange={(e) => handleDateChange(e.target.value)}
                   className="text-xs font-semibold bg-stone-100 border border-stone-200 rounded-lg px-2 py-1 text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
                 />
               </div>
 
-              {/* 快捷按鈕 */}
-              <div className="flex gap-1.5 pt-1">
-                <button 
-                  onClick={() => setQuickDate(0)}
-                  className={`flex-1 text-[11px] py-1 rounded-lg border font-medium transition ${
-                    selectedDate === todayStr ? 'bg-amber-50 border-amber-300 text-amber-700 font-bold' : 'bg-stone-50 border-stone-200 text-stone-600'
-                  }`}
-                >
-                  今日
-                </button>
-                <button 
-                  onClick={() => setQuickDate(1)}
-                  className="flex-1 text-[11px] py-1 rounded-lg border bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100 font-medium transition"
-                >
-                  昨日 (補Mark)
-                </button>
-                <button 
-                  onClick={() => setQuickDate(2)}
-                  className="flex-1 text-[11px] py-1 rounded-lg border bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100 font-medium transition"
-                >
-                  前日 (補Mark)
-                </button>
+              {/* 日期 Shortcut 按鈕著燈邏輯 */}
+              <div className="flex gap-1.5">
+                {[
+                  { label: '今日', days: 0 },
+                  { label: '昨日 (補Mark)', days: 1 },
+                  { label: '前日 (補Mark)', days: 2 }
+                ].map((tab) => {
+                  const targetDate = getDateStr(tab.days);
+                  const isActive = selectedDate === targetDate;
+                  return (
+                    <button
+                      key={tab.days}
+                      onClick={() => handleDateChange(targetDate)}
+                      className={`flex-1 text-[11px] py-1.5 rounded-xl border font-bold transition-all ${
+                        isActive 
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                          : 'bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -258,28 +324,37 @@ export default function App() {
               <div className="bg-white rounded-2xl p-8 text-center border border-stone-200/60 shadow-sm">
                 <AlertCircle className="w-8 h-8 mx-auto mb-2 text-stone-300" />
                 <p className="text-sm font-medium text-stone-600">暫時未有藥物紀錄</p>
-                <p className="text-xs text-stone-400 mt-1">點擊右上角「新增藥物」加入第一款藥</p>
+                <p className="text-xs text-stone-400 mt-1">點擊右上角「新增藥物」開始使用</p>
               </div>
             ) : (
               medications.map((med) => {
-                const taken = isTakenOnDate(med.id, selectedDate);
+                const logs = getTakenLogsOnDate(med.id, selectedDate);
+                const takenCount = logs.length;
                 const isLowStock = med.stock <= 5;
 
                 return (
                   <div 
                     key={med.id}
                     className={`bg-white rounded-2xl p-4 border transition-all duration-200 flex items-center justify-between ${
-                      taken ? 'border-emerald-200 bg-emerald-50/20 opacity-80' : 'border-stone-200/80 shadow-sm hover:shadow-md'
+                      takenCount > 0 ? 'border-emerald-200 bg-emerald-50/20' : 'border-stone-200/80 shadow-sm hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-start gap-3 flex-1 pr-2">
+                      {/* 服藥打勾按鈕 */}
                       <button 
-                        onClick={() => toggleTakenForDate(med)}
-                        className="mt-0.5 transition active:scale-90"
-                        title={taken ? '取消紀錄' : '標示為已食'}
+                        onClick={() => handleMedCheckClick(med)}
+                        className="mt-0.5 transition active:scale-90 relative"
+                        title={takenCount > 0 ? '點擊管理服藥紀錄 / 追加服藥' : '標示為已食'}
                       >
-                        {taken ? (
-                          <CheckCircle2 className="w-6 h-6 text-emerald-500 fill-emerald-100" />
+                        {takenCount > 0 ? (
+                          <div className="relative">
+                            <CheckCircle2 className="w-6 h-6 text-emerald-500 fill-emerald-100" />
+                            {takenCount > 1 && (
+                              <span className="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full border border-white">
+                                x{takenCount}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <Circle className="w-6 h-6 text-stone-300 hover:text-stone-400" />
                         )}
@@ -287,16 +362,23 @@ export default function App() {
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className={`font-bold text-sm ${taken ? 'line-through text-stone-400' : 'text-stone-800'}`}>
+                          <h3 className={`font-bold text-sm ${takenCount > 0 ? 'text-stone-700' : 'text-stone-800'}`}>
                             {med.name}
                           </h3>
                           
-                          {/* 剩餘數量標籤 */}
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 ${
+                          {/* 庫存數量標籤 */}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
                             isLowStock ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-stone-100 text-stone-600'
                           }`}>
                             <Package className="w-3 h-3" /> 剩 {med.stock} {isLowStock && '(快完！)'}
                           </span>
+
+                          {/* 多次服藥標籤 */}
+                          {takenCount > 0 && (
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                              今日已食 {takenCount} 次
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 text-xs">
@@ -312,19 +394,17 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* 編輯與刪除按鈕 */}
+                    {/* 編輯 / 刪除 */}
                     <div className="flex items-center gap-0.5">
                       <button 
                         onClick={() => openEditModal(med)}
                         className="text-stone-400 hover:text-amber-600 p-2 transition rounded-xl hover:bg-amber-50"
-                        title="編輯藥物與庫存"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => deleteMedication(med.id)}
                         className="text-stone-300 hover:text-rose-500 p-2 transition rounded-xl hover:bg-rose-50"
-                        title="刪除藥物"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -336,7 +416,7 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 2: 歷來紀錄 Log (保留最近 60 日) */}
+        {/* TAB 2: 歷來 Log */}
         {activeTab === 'history' && (
           <div className="space-y-3">
             <div className="flex justify-between items-center px-1">
@@ -350,26 +430,20 @@ export default function App() {
               <div className="bg-white rounded-2xl p-8 text-center text-stone-400 border border-stone-200/60 shadow-sm">
                 <History className="w-8 h-8 mx-auto mb-2 text-stone-300" />
                 <p className="text-sm font-medium text-stone-600">暫時未有歷史 Log</p>
-                <p className="text-xs text-stone-400 mt-1">每次打勾服藥後，紀錄會自動存於此處</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {historyLogs.map((log) => (
                   <div key={log.id} className="bg-white rounded-2xl p-3.5 border border-stone-200/70 shadow-sm flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-emerald-100/70 text-emerald-600 rounded-xl">
-                        <Check className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-sm text-stone-800">{log.medName}</h4>
-                        <p className="text-xs text-stone-500">劑量：{log.dosage}</p>
-                      </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-stone-800">{log.medName}</h4>
+                      <p className="text-xs text-stone-500">劑量：{log.dosage}</p>
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-bold text-stone-700 bg-stone-100 px-2.5 py-1 rounded-lg inline-block">
                         {log.date}
                       </span>
-                      <p className="text-[10px] text-stone-400 pt-0.5">{log.timeStr} 記錄</p>
+                      <p className="text-[10px] text-stone-400 pt-0.5">{log.timeStr} 服用</p>
                     </div>
                   </div>
                 ))}
@@ -379,11 +453,57 @@ export default function App() {
         )}
       </main>
 
-      {/* 新增 / 編輯 Modal */}
+      {/* 彈窗 1：一日食多過一次/追加/扣減確認 Pop up */}
+      {confirmModalMed && (
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-4 border border-stone-100">
+            <div className="flex justify-between items-center border-b border-stone-100 pb-3">
+              <h3 className="font-bold text-base text-stone-900 flex items-center gap-1.5">
+                <Cat className="w-5 h-5 text-amber-600" /> 服藥紀錄管理
+              </h3>
+              <button onClick={() => setConfirmModalMed(null)} className="text-stone-400 hover:text-stone-600 p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-stone-700 text-sm">
+              <p className="font-bold text-amber-700">{confirmModalMed.name}</p>
+              <p className="text-xs text-stone-500">
+                你在 <span className="font-bold">{selectedDate}</span> 已經記錄過服用這款藥物 
+                <span className="font-bold text-emerald-600"> ({getTakenLogsOnDate(confirmModalMed.id, selectedDate).length} 次)</span>。
+              </p>
+              <p className="text-xs text-stone-600 pt-1">如果需要一日食多次（例如醫生指示追加一粒），可以點擊追加：</p>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button 
+                onClick={() => addDoseLog(confirmModalMed)}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <PlusCircle className="w-4 h-4" /> 追加服藥一次 (今日多食 1 劑)
+              </button>
+              <button 
+                onClick={() => removeOneDoseLog(confirmModalMed)}
+                className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 border border-rose-200"
+              >
+                <MinusCircle className="w-4 h-4" /> 扣減/取消 1 次紀錄
+              </button>
+              <button 
+                onClick={() => setConfirmModalMed(null)}
+                className="w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2 rounded-xl text-xs"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 彈窗 2：新增 / 編輯 Modal (修復 Textbox 對齊與時間框過大問題) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100 animate-in fade-in slide-in-from-bottom-4 duration-200">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <h3 className="font-bold text-base text-stone-900">
                 {editingId ? '編輯藥物資料與庫存' : '新增藥物提醒'}
               </h3>
@@ -401,11 +521,12 @@ export default function App() {
                   placeholder="例如：降血壓藥 / 維他命C"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* 劑量與時間精確對齊 */}
+              <div className="grid grid-cols-2 gap-3 items-center">
                 <div>
                   <label className="block text-xs font-bold text-stone-500 mb-1">每次服用劑量</label>
                   <input
@@ -413,7 +534,7 @@ export default function App() {
                     placeholder="例如：1 粒 / 10ml"
                     value={formData.dosage}
                     onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                    className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                   />
                 </div>
                 <div>
@@ -422,20 +543,20 @@ export default function App() {
                     type="time"
                     value={formData.time}
                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                    className="w-full border border-stone-200 rounded-xl p-2.5 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">目前剩餘數量 (庫存)</label>
+                <label className="block text-xs font-bold text-stone-500 mb-1">目前剩餘數量 (庫存粒數)</label>
                 <input
                   type="number"
                   min="0"
                   placeholder="例如：30"
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
 
@@ -443,10 +564,10 @@ export default function App() {
                 <label className="block text-xs font-bold text-stone-500 mb-1">備註 / 服用指示</label>
                 <input
                   type="text"
-                  placeholder="例如：餐後服用 / 需配大量溫水"
+                  placeholder="例如：餐後服用 / 溫水送服"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
 
@@ -454,13 +575,13 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-3 rounded-xl text-sm transition"
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl text-sm shadow-md shadow-amber-600/20 transition"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition"
                 >
                   {editingId ? '儲存修改' : '確定新增'}
                 </button>

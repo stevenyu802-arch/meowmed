@@ -71,7 +71,7 @@ export default function App() {
     "喵！有按時食藥嘅主人最精靈！✨",
     "喵～今日飲咗足夠嘅溫水未呀？💧",
     "喵嗚～要隨時留意藥物庫存，冇藥要早啲補！📦",
-    "喵～可以點擊「+ iOS 日曆」加入手機定時提醒啊！📅"
+    "喵～可以點擊庫存管理加入手機定時提醒啊！📅"
   ];
 
   useEffect(() => {
@@ -185,7 +185,7 @@ export default function App() {
     URL.revokeObjectURL(url);
 
     showCatAlert(
-      `已為你生成【${med.name}】嘅日曆檔！喺 iPhone 點擊下載嘅檔案，即可直接「新增每日 ${med.time} 定時響鬧」至 iOS 月曆 📅✨`,
+      `已為你生成【${med.name}】嘅日曆檔！喺 iPhone 點擊下載嘅檔案，即可直接新增每日提醒 📅✨`,
       '喵喵日曆匯出成功 🐾'
     );
   };
@@ -245,7 +245,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
-      <header className="bg-white/90 backdrop-blur border border-amber-100/80 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between">
+      <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">🐱</span>
           <div>
@@ -258,7 +258,7 @@ export default function App() {
 
       <main className="flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-4">
         
-        <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white rounded-3xl p-5 shadow-lg shadow-amber-600/20 relative overflow-hidden space-y-4">
+        <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white rounded-3xl p-5 shadow-lg shadow-amber-600/25 relative overflow-hidden space-y-4">
           <div className="flex justify-between items-start relative z-10">
             <div className="space-y-1">
               <span className="text-amber-200/90 text-[10px] font-bold tracking-wider uppercase">服藥者名字</span>
@@ -570,19 +570,18 @@ export default function App() {
             <div className="space-y-1 text-stone-700 text-sm">
               <p className="font-bold text-amber-700">{confirmModalMed.name}</p>
               <p className="text-xs text-stone-500">
-                你在 <span className="font-bold">{selectedDate}</span> 已記錄 <span className="font-bold text-emerald-600">{getTakenLogsOnDate(confirmModalMed.id, selectedDate).length} 次</span>。如需補Mark，可自由調整實際食藥時間：
+                你在 <span className="font-bold">{selectedDate}</span> 已記錄 <span className="font-bold text-emerald-600">{getTakenLogsOnDate(confirmModalMed.id, selectedDate).length} 次</span>。如需補Mark，可調整實際時間：
               </p>
             </div>
 
-            {/* 修復：嚴格限制時間選擇器高度、內距與外框，防止拉得太長 */}
-            <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200/70 space-y-1.5 overflow-hidden">
-              <label className="block text-xs font-bold text-stone-600">實際服藥時間：</label>
+            {/* 修復：改用左右並排 flex layout，徹底解決 iOS input type=time 直向過長問題 */}
+            <div className="bg-stone-50 px-3.5 py-2.5 rounded-2xl border border-stone-200/70 flex items-center justify-between">
+              <span className="text-xs font-bold text-stone-600 shrink-0">實際服藥時間：</span>
               <input 
                 type="time" 
                 defaultValue={confirmModalMed.time || new Date().toTimeString().slice(0, 5)}
                 id="custom-dose-time"
-                className="w-full max-w-full box-border bg-white border border-stone-300 rounded-xl px-3 py-1.5 text-sm font-bold text-stone-800 text-center focus:outline-none focus:ring-2 focus:ring-amber-500 leading-normal"
-                style={{ minHeight: 'auto' }}
+                className="bg-white border border-stone-300 rounded-xl px-3 py-1 text-xs font-bold text-stone-800 text-center focus:outline-none focus:ring-2 focus:ring-amber-500 w-32"
               />
             </div>
 
@@ -654,8 +653,7 @@ export default function App() {
                     type="time"
                     value={addForm.time}
                     onChange={(e) => setAddForm({ ...addForm, time: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center leading-normal"
-                    style={{ minHeight: 'auto' }}
+                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
                   />
                 </div>
               </div>
@@ -743,8 +741,7 @@ export default function App() {
                     type="time"
                     value={editForm.time}
                     onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center leading-normal"
-                    style={{ minHeight: 'auto' }}
+                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
                   />
                 </div>
               </div>

@@ -1,0 +1,15 @@
+{
+  "name": "MeowMed 人類服藥管家",
+  "short_name": "MeowMed",
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F7F5F0",
+  "theme_color": "#D97706"
+}

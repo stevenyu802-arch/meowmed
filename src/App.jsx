@@ -254,29 +254,17 @@ export default function App() {
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
       {/* 置頂 Sticky Header */}
-      <header className="mb-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100/80 border border-amber-200/70 flex items-center justify-center text-xl shadow-xs shrink-0">
-              🐱
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">MeowMed</h1>
-              <p className="text-[11px] text-amber-800/80 font-medium">人類服藥管家 🐾</p>
-            </div>
+      <header className="mb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-2xl bg-amber-100/80 border border-amber-200/70 flex items-center justify-center text-xl shadow-xs shrink-0">
+            🐱
           </div>
-          <FontSizeControl />
+          <div>
+            <h1 className="text-lg font-bold text-gray-900 leading-tight">MeowMed</h1>
+            <p className="text-[11px] text-amber-800/80 font-medium">人類服藥管家 🐾</p>
+          </div>
         </div>
-
-        <div className="mt-3">
-          <button
-            onClick={() => openAddModal()}
-            className="w-full bg-gray-900 hover:bg-black text-white py-2.5 px-4 rounded-2xl text-sm font-medium flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
-          >
-            <span className="text-base font-bold">+</span>
-            <span>新增藥物</span>
-          </button>
-        </div>
+        <FontSizeControl />
       </header>
 
       {/* 主要內容區域 */}

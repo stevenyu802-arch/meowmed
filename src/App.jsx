@@ -40,9 +40,8 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [activeTab, setActiveTab] = useState('today');
   
-  // 專屬微型選單與編輯狀態
   const [activeMenuMedId, setActiveMenuMedId] = useState(null);
-  const [editingLogTarget, setEditingLogTarget] = useState(null); // { logId, timeStr }
+  const [editingLogTarget, setEditingLogTarget] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addForm, setAddForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -82,11 +81,9 @@ export default function App() {
     return historyLogs.filter(log => log.medId === medId && log.date === dateStr);
   };
 
-  // 1. 極速順滑打卡邏輯（無阻礙 Modal）
   const toggleQuickLog = (med) => {
     const logs = getTakenLogsOnDate(med.id, selectedDate);
     if (logs.length === 0) {
-      // 未打卡 -> 直接打卡一次（預設用藥物原定時間）
       const now = new Date();
       const timeStr = med.time || now.toTimeString().slice(0, 5);
       const newLog = {
@@ -101,14 +98,12 @@ export default function App() {
       setHistoryLogs(prev => [newLog, ...prev]);
       setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
     } else {
-      // 已打卡 -> 取消最後一次打卡
       const lastLog = logs[0];
       setHistoryLogs(prev => prev.filter(l => l.id !== lastLog.id));
       setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: m.stock + 1 } : m));
     }
   };
 
-  // 額外加一粒
   const addExtraDose = (med) => {
     const now = new Date();
     const timeStr = now.toTimeString().slice(0, 5);
@@ -126,7 +121,6 @@ export default function App() {
     setActiveMenuMedId(null);
   };
 
-  // 刪除指定 Log
   const deleteSpecificLog = (logId, medId) => {
     setHistoryLogs(prev => prev.filter(l => l.id !== logId));
     setMedications(prev => prev.map(m => m.id === medId ? { ...m, stock: m.stock + 1 } : m));
@@ -134,7 +128,6 @@ export default function App() {
     setEditingLogTarget(null);
   };
 
-  // 更新特定 Log 時間
   const saveLogTimeChange = (logId) => {
     if (!editingLogTarget) return;
     setHistoryLogs(prev => prev.map(l => l.id === logId ? { ...l, timeStr: editingLogTarget.timeStr } : l));
@@ -228,7 +221,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
-      {/* 頂部 Header */}
+      {/* 頂部 Header：空間寬敞，專注品牌與字型控制 */}
       <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between max-w-md w-full mx-auto mt-2">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">🐱</span>
@@ -238,14 +231,6 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {selectedDate !== getTodayStr() && (
-            <button 
-              onClick={() => setSelectedDate(getTodayStr())}
-              className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition"
-            >
-              <RefreshCw className="w-3 h-3" /> 回到今日
-            </button>
-          )}
           <FontSizeControl />
         </div>
       </header>
@@ -326,18 +311,31 @@ export default function App() {
 
         {activeTab === 'today' && (
           <div className="space-y-3.5">
-            {/* 日期選擇卡片 */}
-            <div className="bg-white rounded-2xl p-3 border border-stone-200/70 shadow-sm space-y-2.5">
+            {/* 日期選擇卡片：將「回到今日」按鈕移到呢度，與補 Mark 區域完美結合 */}
+            <div className="bg-white rounded-2xl p-3.5 border border-stone-200/70 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-amber-600" /> 檢視/補Mark日期：
                 </span>
+                
+                {/* 搬到呢度嘅「回到今日」按鈕，當非今日時才會出現 */}
+                {selectedDate !== getTodayStr() && (
+                  <button 
+                    onClick={() => setSelectedDate(getTodayStr())}
+                    className="bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-xl shadow-xs flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" /> 回到今日
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
                 <input 
                   type="date" 
                   value={selectedDate}
                   max={getTodayStr()}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  className="text-xs font-semibold bg-stone-100 border border-stone-200 rounded-lg px-2 py-1 text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="text-xs font-semibold bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500 flex-1"
                 />
               </div>
 
@@ -353,7 +351,7 @@ export default function App() {
                     <button
                       key={tab.days}
                       onClick={() => handleDateChange(targetDate)}
-                      className={`flex-1 text-[11px] py-1.5 rounded-xl border font-bold transition-all ${
+                      className={`flex-1 text-[11px] py-1.5 rounded-xl border font-bold transition-all cursor-pointer ${
                         isActive 
                           ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
                           : 'bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100'
@@ -468,7 +466,7 @@ export default function App() {
                       <div className="bg-stone-50 border border-stone-200 rounded-2xl p-3 mt-3 space-y-3 animate-fadeIn">
                         <div className="flex justify-between items-center border-b border-stone-200 pb-2">
                           <span className="text-xs font-bold text-stone-700">📋 管理 【{med.name}】 服藥紀錄</span>
-                          <button onClick={() => setActiveMenuMedId(null)} className="text-stone-400 hover:text-stone-600 p-1">
+                          <button onClick={() => setActiveMenuMedId(null)} className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -488,13 +486,13 @@ export default function App() {
                                   />
                                   <button 
                                     onClick={() => saveLogTimeChange(log.id)}
-                                    className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg"
+                                    className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer"
                                   >
                                     儲存
                                   </button>
                                   <button 
                                     onClick={() => setEditingLogTarget(null)}
-                                    className="bg-stone-200 text-stone-600 text-[10px] font-bold px-2 py-1 rounded-lg"
+                                    className="bg-stone-200 text-stone-600 text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer"
                                   >
                                     取消
                                   </button>
@@ -506,13 +504,13 @@ export default function App() {
                                   </span>
                                   <button 
                                     onClick={() => setEditingLogTarget({ logId: log.id, timeStr: log.timeStr })}
-                                    className="text-xs text-amber-600 hover:underline font-bold px-1"
+                                    className="text-xs text-amber-600 hover:underline font-bold px-1 cursor-pointer"
                                   >
                                     ✏️ 改時間
                                   </button>
                                   <button 
                                     onClick={() => deleteSpecificLog(log.id, med.id)}
-                                    className="text-xs text-rose-500 hover:underline font-bold px-1"
+                                    className="text-xs text-rose-500 hover:underline font-bold px-1 cursor-pointer"
                                   >
                                     🗑️ Delete
                                   </button>
@@ -525,13 +523,13 @@ export default function App() {
                         <div className="flex gap-2 pt-1">
                           <button 
                             onClick={() => addExtraDose(med)}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 transition shadow-xs"
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 transition shadow-xs cursor-pointer"
                           >
                             <PlusCircle className="w-3.5 h-3.5" /> ➕ 再加一粒
                           </button>
                           <button 
                             onClick={() => toggleQuickLog(med)}
-                            className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold px-3 py-2 rounded-xl transition"
+                            className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer"
                           >
                             取消最後一次
                           </button>
@@ -597,7 +595,7 @@ export default function App() {
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <h3 className="font-bold text-base text-stone-900">新增藥物提醒</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1">
+              <button onClick={() => setIsAddModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -664,7 +662,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition"
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
                 >
                   取消
                 </button>
@@ -686,7 +684,7 @@ export default function App() {
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
               <h3 className="font-bold text-base text-stone-900">編輯藥物資料與庫存</h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1">
+              <button onClick={() => setIsEditModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -753,7 +751,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition"
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
                 >
                   取消
                 </button>

@@ -295,8 +295,10 @@ export default function App() {
   note: "",
   stock: ""
 });
-          if (typeof setShowAddModal === "function") setShowAddModal(true);
-          else if (typeof setShowModal === "function") setShowModal(true);
+if (typeof setShowAddModal === "function") {
+  setFormData({ name: "", dosage: "", time: "08:00", frequency: "daily", note: "", stock: "" });
+  setShowAddModal(true);
+} else if (typeof setShowModal === "function")setShowModal(true);
         }}
               className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner"
               title="點擊同貓貓互動"

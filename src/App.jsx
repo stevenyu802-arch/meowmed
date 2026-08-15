@@ -284,7 +284,7 @@ export default function App() {
             </div>
 
             <button 
-              onClick={() => setCatMoodIndex((catMoodIndex + 1) % catQuotes.length)}
+              onClick={() => { openAddModal() }}
               className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner"
               title="點擊同貓貓互動"
             >

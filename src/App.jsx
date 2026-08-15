@@ -309,16 +309,8 @@ export default function App() {
         </div>
 
         {/* Tab 頁籤 */}
-        <div className="flex items-center justify-between mt-4 mb-2 px-1">
-        <span className="text-xs font-bold text-gray-500 tracking-wide">藥物管理</span>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-amber-800 hover:bg-amber-900 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer"
-        >
-          <span className="text-sm leading-none">+</span>
-          <span>新增藥物</span>
-        </button>
-      </div>
+        
+
 <div className="flex items-center justify-between mt-5 mb-2 px-1">
         <span className="text-xs font-bold text-amber-900/70 tracking-wider">藥物清單管理</span>
         <button

@@ -100,8 +100,15 @@ export default function App() {
   };
 
   const handleMedCheckClick = (med) => {
-    // 無論有冇食過，點擊勾選都彈出管理視窗，方便補Mark或調整時間
-    setConfirmModalMed(med);
+    const logs = getTakenLogsOnDate(med.id, selectedDate);
+    if (logs.length === 0) {
+      // 第一次點擊：直接幫佢當刻打剔食藥
+      const now = new Date();
+      addDoseLog(med, now.toTimeString().slice(0, 5));
+    } else {
+      // 已經食過（有記錄），再撳先彈出管理視窗（補Mark / 扣減）
+      setConfirmModalMed(med);
+    }
   };
 
   const addDoseLog = (med, customTimeStr = null) => {
@@ -388,6 +395,7 @@ export default function App() {
                         <button 
                           onClick={() => handleMedCheckClick(med)}
                           className="mt-0.5 transition active:scale-90 relative"
+                          title={takenCount === 0 ? "點擊打剔食藥" : "已打剔，再次點擊管理/補Mark"}
                         >
                           {takenCount > 0 ? (
                             <div className="relative">
@@ -568,13 +576,14 @@ export default function App() {
               </p>
             </div>
 
-            <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200/70 space-y-1.5">
+            {/* 修復：調整 container 闊度同 padding，防止時間選擇器出界 */}
+            <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200/70 space-y-1.5 overflow-hidden">
               <label className="block text-xs font-bold text-stone-600">實際服藥時間：</label>
               <input 
                 type="time" 
                 defaultValue={confirmModalMed.time || new Date().toTimeString().slice(0, 5)}
                 id="custom-dose-time"
-                className="w-full bg-white border border-stone-300 rounded-xl p-2.5 text-sm font-bold text-stone-800 text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full max-w-full box-border bg-white border border-stone-300 rounded-xl px-3 py-2.5 text-sm font-bold text-stone-800 text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
 

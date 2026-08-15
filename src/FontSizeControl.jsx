@@ -21,7 +21,7 @@ export default function FontSizeControl() {
   }, []);
 
   return (
-    <div className="inline-flex items-center gap-0.5 bg-amber-100/70 border border-amber-200/80 px-2 py-0.5 rounded-full text-xs select-none shrink-0" style={{ fontSize: '12px' }}>
+    <div className="inline-flex items-center gap-1 bg-amber-50/80 border border-amber-200/80 px-2.5 py-1 rounded-full text-xs select-none shrink-0" style={{ fontSize: '12px' }}>
       <span className="text-amber-800 font-bold text-[11px] pr-0.5">字型</span>
       {[
         { label: '小', val: 'small' },
@@ -32,9 +32,9 @@ export default function FontSizeControl() {
           key={item.val}
           type="button"
           onClick={() => applySize(item.val)}
-          className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+          className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
             currentSize === item.val
-              ? 'bg-amber-600 text-white font-bold'
+              ? 'bg-amber-600 text-white font-bold shadow-xs'
               : 'text-amber-900/70 hover:bg-amber-200/50'
           }`}
         >

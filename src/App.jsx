@@ -254,12 +254,12 @@ export default function App() {
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
       {/* 置頂 Sticky Header */}
-      <header className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <header className="bg-white/90 backdrop-blur border border-amber-100/80 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
           <span className="text-2xl">🐱</span>
           <div>
-            <h1 className="text-lg font-bold text-gray-800 leading-none">MeowMed</h1>
-            <p className="text-xs text-amber-800 font-medium mt-0.5">人類服藥管家 🐾</p>
+            <h1 className="text-lg font-bold text-gray-900 leading-none">MeowMed</h1>
+            <p className="text-xs text-amber-800 font-medium mt-1">人類服藥管家 🐾</p>
           </div>
         </div>
         <FontSizeControl />
@@ -316,6 +316,17 @@ export default function App() {
           className="bg-amber-800 hover:bg-amber-900 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer"
         >
           <span className="text-sm leading-none">+</span>
+          <span>新增藥物</span>
+        </button>
+      </div>
+<div className="flex items-center justify-between mt-5 mb-2 px-1">
+        <span className="text-xs font-bold text-amber-900/70 tracking-wider">藥物清單管理</span>
+        <button
+          type="button"
+          onClick={() => setIsModalOpen(true)}
+          className="bg-[#5C3A21] hover:bg-[#4A2E1A] active:scale-95 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
+        >
+          <span className="text-sm font-bold leading-none">+</span>
           <span>新增藥物</span>
         </button>
       </div>

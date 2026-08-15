@@ -49,3 +49,19 @@ div[class*="modal"] .grid > div {
   box-sizing: border-box !important;
   min-width: 0 !important;
 }
+
+/* 彈出視窗輸入框防溢出 */
+.modal-content input, .modal-content select, .modal-content textarea,
+[role="dialog"] input, [role="dialog"] select, [role="dialog"] textarea,
+div[class*="modal"] input, div[class*="modal"] select, div[class*="modal"] textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.modal-content input[type="time"],
+[role="dialog"] input[type="time"],
+div[class*="modal"] input[type="time"] {
+  -webkit-appearance: none !important;
+}

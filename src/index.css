@@ -7,3 +7,11 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 20px);
   -webkit-tap-highlight-color: transparent;
 }
+/* meowmed-modal-fix: 僅修復彈出視窗內部的輸入框對齊與邊界 */
+.modal-content input, .modal-content select, .modal-content textarea,
+[role="dialog"] input, [role="dialog"] select, [role="dialog"] textarea,
+div[class*="modal"] input, div[class*="modal"] select, div[class*="modal"] textarea {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}

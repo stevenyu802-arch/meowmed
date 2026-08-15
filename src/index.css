@@ -42,3 +42,10 @@ div[class*="modal"] .grid > div {
   min-width: 0 !important;
   width: 100% !important;
 }
+
+/* Modal 欄位與時間輸入框防溢出保護 */
+.modal-content input, [role="dialog"] input, div[class*="modal"] input {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+}

@@ -254,14 +254,12 @@ export default function App() {
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
       {/* 置頂 Sticky Header */}
-      <header className="mb-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-2xl bg-amber-100/80 border border-amber-200/70 flex items-center justify-center text-xl shadow-xs shrink-0">
-            🐱
-          </div>
+      <header className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">🐱</span>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 leading-tight">MeowMed</h1>
-            <p className="text-[11px] text-amber-800/80 font-medium">人類服藥管家 🐾</p>
+            <h1 className="text-lg font-bold text-gray-800 leading-none">MeowMed</h1>
+            <p className="text-xs text-amber-800 font-medium mt-0.5">人類服藥管家 🐾</p>
           </div>
         </div>
         <FontSizeControl />
@@ -311,7 +309,17 @@ export default function App() {
         </div>
 
         {/* Tab 頁籤 */}
-        <div className="flex bg-stone-200/60 p-1 rounded-2xl text-xs font-bold text-stone-600">
+        <div className="flex items-center justify-between mt-4 mb-2 px-1">
+        <span className="text-xs font-bold text-gray-500 tracking-wide">藥物管理</span>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-amber-800 hover:bg-amber-900 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer"
+        >
+          <span className="text-sm leading-none">+</span>
+          <span>新增藥物</span>
+        </button>
+      </div>
+<div className="flex bg-stone-200/60 p-1 rounded-2xl text-xs font-bold text-stone-600">
           <button 
             onClick={() => setActiveTab('today')}
             className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${

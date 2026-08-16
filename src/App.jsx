@@ -48,6 +48,9 @@ export default function App() {
   const [editingMedId, setEditingMedId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '' });
 
+  // 貓貓風格刪除確認 State
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
+
   const [catMoodIndex, setCatMoodIndex] = useState(0);
   const catQuotes = [
     "喵～記得按時食藥，乖乖照顧好自己哦！🐾",
@@ -209,10 +212,10 @@ export default function App() {
     setIsEditModalOpen(false);
   };
 
-  const deleteMedication = (med) => {
-    if (window.confirm(`喵～確定要刪除【${med.name}】？`)) {
-      setMedications(prev => prev.filter(m => m.id !== med.id));
-    }
+  const confirmDeleteMedication = () => {
+    if (!deleteConfirmTarget) return;
+    setMedications(prev => prev.filter(m => m.id !== deleteConfirmTarget.id));
+    setDeleteConfirmTarget(null);
   };
 
   const todayDateStr = getTodayStr();
@@ -221,7 +224,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
-      {/* 頂部 Header：空間寬敞，專注品牌與字型控制 */}
+      {/* 頂部 Header */}
       <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between max-w-md w-full mx-auto mt-2">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">🐱</span>
@@ -311,14 +314,14 @@ export default function App() {
 
         {activeTab === 'today' && (
           <div className="space-y-3.5">
-            {/* 日期選擇卡片：將「回到今日」按鈕移到呢度，與補 Mark 區域完美結合 */}
+            {/* 日期選擇卡片 */}
             <div className="bg-white rounded-2xl p-3.5 border border-stone-200/70 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-amber-600" /> 檢視/補Mark日期：
                 </span>
                 
-                {/* 搬到呢度嘅「回到今日」按鈕，當非今日時才會出現 */}
+                {/* 「回到今日」按鈕 */}
                 {selectedDate !== getTodayStr() && (
                   <button 
                     onClick={() => setSelectedDate(getTodayStr())}
@@ -387,7 +390,7 @@ export default function App() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1 pr-2">
-                        {/* 1. 極速打卡按鈕 (圓圈) */}
+                        {/* 極速打卡按鈕 */}
                         <button 
                           onClick={() => toggleQuickLog(med)}
                           className="mt-0.5 transition active:scale-90 relative cursor-pointer"
@@ -420,7 +423,6 @@ export default function App() {
                             <span className="font-medium text-stone-600">{med.dosage}</span>
                           </div>
 
-                          {/* 2. 精緻狀態標籤：點擊彈出微型選單 */}
                           <div className="pt-1">
                             {takenCount > 0 ? (
                               <button
@@ -452,7 +454,7 @@ export default function App() {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => deleteMedication(med)}
+                          onClick={() => setDeleteConfirmTarget(med)}
                           className="text-stone-300 hover:text-rose-500 p-1.5 transition rounded-xl hover:bg-rose-50 cursor-pointer"
                           title="刪除藥物"
                         >
@@ -461,7 +463,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* 微型選單面板 (Contextual Menu Popup) */}
+                    {/* 微型選單面板 */}
                     {isMenuOpen && (
                       <div className="bg-stone-50 border border-stone-200 rounded-2xl p-3 mt-3 space-y-3 animate-fadeIn">
                         <div className="flex justify-between items-center border-b border-stone-200 pb-2">
@@ -763,6 +765,39 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 貓貓風格專屬刪除確認 Modal (取代原生 window.confirm) */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-amber-100 animate-fadeIn">
+            <div className="w-14 h-14 bg-amber-100 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner">
+              🐱❓
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-base text-stone-900">確定要刪除嗎？</h3>
+              <p className="text-xs text-stone-500 px-2">
+                喵～確定要將 <span className="font-bold text-amber-800">【{deleteConfirmTarget.name}】</span> 從清單入面移除？
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTarget(null)}
+                className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
+              >
+                保留
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteMedication}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-rose-600/20 transition cursor-pointer"
+              >
+                確認刪除
+              </button>
+            </div>
           </div>
         </div>
       )}

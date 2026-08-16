@@ -60,6 +60,14 @@ export default function App() {
     "喵～可以點擊日曆圖示加入手機定時提醒啊！📅"
   ];
 
+  // 自動每隔 5 秒轉一次貓貓對白
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCatMoodIndex((prev) => (prev + 1) % catQuotes.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [catQuotes.length]);
+
   useEffect(() => {
     localStorage.setItem('meowmed_meds_v9', JSON.stringify(medications));
   }, [medications]);
@@ -258,13 +266,14 @@ export default function App() {
             <button 
               onClick={() => setCatMoodIndex((prev) => (prev + 1) % catQuotes.length)}
               className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner cursor-pointer"
+              title="點擊手動切換下一句"
             >
               <Cat className="w-6 h-6 text-amber-100" />
               <Sparkles className="w-3.5 h-3.5 text-amber-200 animate-pulse" />
             </button>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 flex items-center gap-2 text-xs text-amber-50 font-medium">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 flex items-center gap-2 text-xs text-amber-50 font-medium transition-all duration-300">
             <span>{catQuotes[catMoodIndex]}</span>
           </div>
 
@@ -769,7 +778,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 貓貓風格專屬刪除確認 Modal (取代原生 window.confirm) */}
+      {/* 貓貓風格專屬刪除確認 Modal */}
       {deleteConfirmTarget && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-amber-100 animate-fadeIn">

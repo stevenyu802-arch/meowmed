@@ -3,7 +3,7 @@ import {
   Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, 
   Heart, Calendar, Cat, History, X, AlertCircle, Package, 
   PlusCircle, RefreshCw, BellRing, Sparkles, Timer, Moon, 
-  Lock, PawPrint, Type 
+  Lock, PawPrint, Type, Minus, Search, ChevronRight
 } from 'lucide-react';
 
 // ==========================================
@@ -28,24 +28,27 @@ function FontSizeControl() {
     <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200/60">
       <Type className="w-3.5 h-3.5 text-stone-500 ml-1" />
       <button
+        type="button"
         onClick={() => setFontSize('sm')}
-        className={`px-2 py-0.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+        className={`px-2 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
           fontSize === 'sm' ? 'bg-amber-500 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
         }`}
       >
         小
       </button>
       <button
+        type="button"
         onClick={() => setFontSize('md')}
-        className={`px-2 py-0.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+        className={`px-2 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
           fontSize === 'md' ? 'bg-amber-500 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
         }`}
       >
         中
       </button>
       <button
+        type="button"
         onClick={() => setFontSize('lg')}
-        className={`px-2 py-0.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+        className={`px-2 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
           fontSize === 'lg' ? 'bg-amber-500 text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
         }`}
       >
@@ -56,7 +59,58 @@ function FontSizeControl() {
 }
 
 // ==========================================
-// 2. 主應用程式元件 (App)
+// 2. 加減計數器元件 (StepperInput)
+// ==========================================
+function StepperInput({ value, onChange, min = 1, max = 999, unit = '' }) {
+  const numValue = parseInt(value, 10) || min;
+
+  const handleDecrement = () => {
+    if (numValue > min) onChange(numValue - 1);
+  };
+
+  const handleIncrement = () => {
+    if (numValue < max) onChange(numValue + 1);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleDecrement}
+        className="w-11 h-11 rounded-2xl bg-stone-100 border border-stone-200/80 text-stone-700 font-black text-lg flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-xs hover:bg-stone-200"
+      >
+        <Minus className="w-5 h-5 text-stone-600" />
+      </button>
+
+      <div className="flex-1 relative">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={numValue}
+          onChange={(e) => onChange(parseInt(e.target.value, 10) || min)}
+          className="w-full border border-stone-200 rounded-2xl py-2.5 text-center text-base font-extrabold bg-stone-50/70 focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-800"
+        />
+        {unit && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400 pointer-events-none">
+            {unit}
+          </span>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={handleIncrement}
+        className="w-11 h-11 rounded-2xl bg-amber-100 border border-amber-200 text-amber-800 font-black text-lg flex items-center justify-center active:scale-90 transition cursor-pointer shrink-0 shadow-xs hover:bg-amber-200"
+      >
+        <Plus className="w-5 h-5 text-amber-700" />
+      </button>
+    </div>
+  );
+}
+
+// ==========================================
+// 3. 主應用程式元件 (App)
 // ==========================================
 export default function App() {
   const getTodayStr = () => {
@@ -97,6 +151,9 @@ export default function App() {
   const [userName, setUserName] = useState(() => localStorage.getItem('meowmed_username') || '自己');
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [activeTab, setActiveTab] = useState('today');
+
+  // 歷史搜尋日期 Filter
+  const [historySearchDate, setHistorySearchDate] = useState('');
 
   const [editingTimeLog, setEditingTimeLog] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -221,7 +278,7 @@ export default function App() {
 
   const handleToggleDose = (med, doseIndex) => {
     const logs = getLogsOnDate(med.id, selectedDate);
-    const existingLog = logs[doseIndex];
+    const existingLog = logs.find(l => l.doseIndex === doseIndex);
 
     if (existingLog) {
       setHistoryLogs(prev => prev.filter(l => l.id !== existingLog.id));
@@ -237,13 +294,15 @@ export default function App() {
         date: selectedDate,
         timeStr: timeStr,
         timestamp: Date.now(),
-        doseIndex: doseIndex
+        doseIndex: doseIndex,
+        isExtra: false
       };
       setHistoryLogs(prev => [newLog, ...prev]);
       setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
     }
   };
 
+  // 新增補充藥物
   const addExtraDose = (med) => {
     const now = new Date();
     const timeStr = now.toTimeString().slice(0, 5);
@@ -255,10 +314,17 @@ export default function App() {
       date: selectedDate,
       timeStr: timeStr,
       timestamp: Date.now(),
-      doseIndex: 99
+      doseIndex: 99,
+      isExtra: true
     };
     setHistoryLogs(prev => [newLog, ...prev]);
     setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
+  };
+
+  // 隨時取消/刪除補充藥物
+  const removeExtraDose = (logId, medId) => {
+    setHistoryLogs(prev => prev.filter(l => l.id !== logId));
+    setMedications(prev => prev.map(m => m.id === medId ? { ...m, stock: m.stock + 1 } : m));
   };
 
   const handleSaveLogTime = (logId, newTimeStr) => {
@@ -372,6 +438,7 @@ export default function App() {
   const todayDateStr = getTodayStr();
   const activeMedsToday = medications.filter(m => isMedicationActiveOnDate(m, todayDateStr));
   const completedCount = activeMedsToday.filter(m => getLogsOnDate(m.id, todayDateStr).length >= (m.dailyDoses || 1)).length;
+  const progressPercent = activeMedsToday.length > 0 ? Math.round((completedCount / activeMedsToday.length) * 100) : 0;
 
   const toggleWeekDay = (form, setForm, dayNum) => {
     const current = form.weekDays || [];
@@ -381,17 +448,31 @@ export default function App() {
     setForm({ ...form, weekDays: updated });
   };
 
+  // 歷史 Log 按日期分組與過濾
+  const filteredHistoryLogs = historyLogs.filter(log => {
+    if (!historySearchDate) return true;
+    return log.date === historySearchDate;
+  });
+
+  const groupedHistoryLogs = filteredHistoryLogs.reduce((acc, log) => {
+    if (!acc[log.date]) acc[log.date] = [];
+    acc[log.date].push(log);
+    return acc;
+  }, {});
+
+  const sortedHistoryDates = Object.keys(groupedHistoryLogs).sort((a, b) => b.localeCompare(a));
+
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
       {/* 頂部 Header */}
-      <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-4 flex items-center justify-between max-w-md w-full mx-auto mt-2">
+      <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-3 flex items-center justify-between max-w-md w-full mx-auto mt-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center text-amber-700 font-bold shadow-inner">
-            <PawPrint className="w-5 h-5 fill-amber-500 text-amber-600" />
+          <div className="w-9 h-9 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-700 font-bold shadow-inner">
+            <PawPrint className="w-5 h-5 fill-amber-500 text-amber-600 animate-pulse" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 leading-none">MeowMed</h1>
+            <h1 className="text-lg font-black text-stone-900 leading-none">MeowMed</h1>
             <p className="text-xs text-amber-800 font-medium mt-1">智能服藥管家 🐾</p>
           </div>
         </div>
@@ -400,13 +481,13 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-md w-full mx-auto px-4 py-2 space-y-4">
+      <main className="flex-1 max-w-md w-full mx-auto px-4 py-1 space-y-4 pb-12">
         
-        {/* 貓貓狀態卡片 */}
-        <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white rounded-3xl p-5 shadow-lg shadow-amber-600/25 relative overflow-hidden space-y-4">
+        {/* 貓貓進度卡片 (Cute Cat Theme) */}
+        <div className="bg-gradient-to-br from-[#5C3A21] via-amber-800 to-amber-900 text-white rounded-3xl p-5 shadow-xl shadow-amber-950/20 relative overflow-hidden space-y-3.5">
           <div className="flex justify-between items-start relative z-10">
             <div className="space-y-1">
-              <span className="text-amber-200/90 text-[10px] font-bold tracking-wider uppercase">服藥者名字</span>
+              <span className="text-amber-200/90 text-[10px] font-bold tracking-wider uppercase">主子 / 服藥者</span>
               <div>
                 <input 
                   type="text" 
@@ -418,56 +499,75 @@ export default function App() {
             </div>
 
             <button 
+              type="button"
               onClick={() => setCatMoodIndex((prev) => (prev + 1) % catQuotes.length)}
               className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner cursor-pointer"
             >
-              <Cat className="w-6 h-6 text-amber-100" />
-              <Sparkles className="w-3.5 h-3.5 text-amber-200 animate-pulse" />
+              <Cat className="w-6 h-6 text-amber-200" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
             </button>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 flex items-center gap-2 text-xs text-amber-50 font-medium transition-all duration-300">
-            <span>{catQuotes[catMoodIndex]}</span>
+          {/* 貓貓助手對話框 */}
+          <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/20 text-xs text-amber-50 font-medium transition-all duration-300 flex items-start gap-2">
+            <span className="text-base">💬</span>
+            <span className="leading-relaxed">{catQuotes[catMoodIndex]}</span>
           </div>
 
-          <div className="pt-1 flex items-center justify-between text-xs text-amber-100 font-semibold border-t border-amber-400/30">
-            <span className="flex items-center gap-1">
-              <Heart className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-              今日進度：{completedCount} / {activeMedsToday.length} 款
-            </span>
-            <span className="text-[11px] bg-amber-800/30 px-2 py-0.5 rounded-lg border border-amber-400/20">
-              {completedCount === activeMedsToday.length && activeMedsToday.length > 0 ? '✨ 今日任務完成！' : '按時服藥最精靈'}
-            </span>
+          {/* 進度條與貓爪 */}
+          <div className="space-y-1.5 pt-1 border-t border-amber-700/50">
+            <div className="flex justify-between items-center text-xs font-bold text-amber-100">
+              <span className="flex items-center gap-1.5">
+                <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
+                今日進度：{completedCount} / {activeMedsToday.length} 款
+              </span>
+              <span className="bg-amber-700/60 text-amber-200 text-[11px] px-2 py-0.5 rounded-full border border-amber-500/30">
+                {progressPercent}%
+              </span>
+            </div>
+
+            <div className="w-full h-3 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/10">
+              <div 
+                className="h-full bg-gradient-to-r from-amber-400 to-amber-200 rounded-full transition-all duration-500 relative"
+                style={{ width: `${progressPercent}%` }}
+              >
+                {progressPercent > 0 && (
+                  <PawPrint className="w-2.5 h-2.5 text-amber-900 fill-amber-900 absolute right-1 top-1/2 -translate-y-1/2 opacity-70" />
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* 標題與新增按鈕 */}
-        <div className="flex items-center justify-between mt-4 mb-2 px-1">
-          <span className="text-xs font-bold text-amber-900/70 tracking-wider">藥物清單管理</span>
+        <div className="flex items-center justify-between mt-2 mb-1 px-1">
+          <span className="text-xs font-bold text-[#5C3A21] tracking-wider">藥物清單管理</span>
           <button
             type="button"
             onClick={openAddModal}
-            className="bg-[#5C3A21] hover:bg-[#4A2E1A] active:scale-95 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
+            className="bg-[#5C3A21] hover:bg-[#4A2E1A] active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-2xl shadow-md shadow-amber-950/20 flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
           >
-            <span className="text-sm font-bold leading-none">+</span>
+            <Plus className="w-4 h-4" />
             <span>新增藥物</span>
           </button>
         </div>
 
         {/* Tabs 切換 */}
-        <div className="flex bg-stone-200/60 p-1 rounded-2xl text-xs font-bold text-stone-600">
+        <div className="flex bg-stone-200/70 p-1 rounded-2xl text-xs font-bold text-stone-600">
           <button 
+            type="button"
             onClick={() => setActiveTab('today')}
-            className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${
-              activeTab === 'today' ? 'bg-white text-stone-900 shadow-sm' : 'hover:text-stone-900'
+            className={`flex-1 py-3 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'today' ? 'bg-white text-stone-900 shadow-sm font-extrabold' : 'hover:text-stone-900'
             }`}
           >
             <Calendar className="w-4 h-4 text-amber-600" /> 服藥 Checklist
           </button>
           <button 
+            type="button"
             onClick={() => setActiveTab('history')}
-            className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${
-              activeTab === 'history' ? 'bg-white text-stone-900 shadow-sm' : 'hover:text-stone-900'
+            className={`flex-1 py-3 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'history' ? 'bg-white text-stone-900 shadow-sm font-extrabold' : 'hover:text-stone-900'
             }`}
           >
             <History className="w-4 h-4 text-amber-600" /> 歷史 Log ({historyLogs.length})
@@ -484,6 +584,7 @@ export default function App() {
                 
                 {selectedDate !== getTodayStr() && (
                   <button 
+                    type="button"
                     onClick={() => setSelectedDate(getTodayStr())}
                     className="bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-xl shadow-xs flex items-center gap-1 transition cursor-pointer"
                   >
@@ -498,7 +599,7 @@ export default function App() {
                   value={selectedDate}
                   max={getTodayStr()}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  className="text-xs font-semibold bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500 flex-1"
+                  className="text-xs font-bold bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500 flex-1"
                 />
               </div>
 
@@ -513,10 +614,11 @@ export default function App() {
                   return (
                     <button
                       key={tab.days}
+                      type="button"
                       onClick={() => handleDateChange(targetDate)}
-                      className={`flex-1 text-[11px] py-1.5 rounded-xl border font-bold transition-all cursor-pointer ${
+                      className={`flex-1 text-[11px] py-2 rounded-xl border font-bold transition-all cursor-pointer ${
                         isActive 
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                          ? 'bg-[#5C3A21] text-white border-[#5C3A21] shadow-xs' 
                           : 'bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100'
                       }`}
                     >
@@ -538,8 +640,10 @@ export default function App() {
               medications.map((med) => {
                 const isActiveToday = isMedicationActiveOnDate(med, selectedDate);
                 const logs = getLogsOnDate(med.id, selectedDate);
+                const regularLogs = logs.filter(l => !l.isExtra && l.doseIndex !== 99);
+                const extraLogs = logs.filter(l => l.isExtra || l.doseIndex === 99);
                 const totalDosesNeeded = med.freqType === 'daily' ? (med.dailyDoses || 1) : 1;
-                const isCompleted = logs.length >= totalDosesNeeded;
+                const isCompleted = regularLogs.length >= totalDosesNeeded;
                 const isLowStock = med.stock <= 5;
                 const nextDueInfo = calculateNextDueTimeInfo(med);
 
@@ -551,11 +655,11 @@ export default function App() {
                 return (
                   <div 
                     key={med.id}
-                    className={`bg-white rounded-2xl p-4 border transition-all duration-200 space-y-3 relative ${
+                    className={`bg-white rounded-3xl p-4 border transition-all duration-200 space-y-3 relative ${
                       !isActiveToday 
                         ? 'opacity-60 bg-stone-50/80 border-stone-200' 
                         : isCompleted 
-                          ? 'border-emerald-200 bg-emerald-50/10' 
+                          ? 'border-emerald-200 bg-emerald-50/10 shadow-xs' 
                           : 'border-stone-200/80 shadow-sm hover:shadow-md'
                     }`}
                   >
@@ -563,26 +667,26 @@ export default function App() {
                       <div className="space-y-2 flex-1 pr-2">
                         
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-sm text-stone-800">{med.name}</h3>
+                          <h3 className="font-extrabold text-base text-stone-800">{med.name}</h3>
                           
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
+                          <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 ${
                             isLowStock ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-stone-100 text-stone-600'
                           }`}>
                             <Package className="w-3 h-3" /> 剩 {med.stock} {isLowStock && '(快完！)'}
                           </span>
 
-                          <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-md">
+                          <span className="text-[11px] bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 rounded-md">
                             {freqBadgeText}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2 text-xs text-stone-600">
-                          <span className="flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/50">
-                            <Clock className="w-3 h-3 text-amber-600" /> {med.time}
+                        <div className="flex items-center gap-2 text-xs text-stone-600 flex-wrap">
+                          <span className="flex items-center gap-1 font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" /> {med.time}
                           </span>
-                          <span className="font-bold text-stone-700">每次 {med.dosage}</span>
+                          <span className="font-extrabold text-stone-700">每次 {med.dosage}</span>
                           {med.freqType === 'daily' && (
-                            <span className="text-stone-400 font-medium">｜ 每日 {med.dailyDoses || 1} 次</span>
+                            <span className="text-stone-400 font-bold">｜ 每日 {med.dailyDoses || 1} 次</span>
                           )}
                         </div>
 
@@ -596,36 +700,38 @@ export default function App() {
                         )}
 
                         {med.notes && (
-                          <p className="text-xs text-stone-400 italic">{med.notes}</p>
+                          <p className="text-xs text-stone-400 italic font-medium">{med.notes}</p>
                         )}
 
                         {!isActiveToday ? (
-                          <div className="bg-stone-100 border border-stone-200 rounded-xl p-2.5 flex items-center gap-2 text-xs text-stone-500 font-bold">
+                          <div className="bg-stone-100 border border-stone-200 rounded-2xl p-2.5 flex items-center gap-2 text-xs text-stone-500 font-bold">
                             <Lock className="w-4 h-4 text-stone-400" />
                             <span>今日為休息日 🐾 無需服藥</span>
                           </div>
                         ) : (
                           <div className="pt-1 space-y-2">
+                            {/* 常規打卡按鈕 */}
                             <div className="flex items-center gap-2 flex-wrap">
                               {Array.from({ length: totalDosesNeeded }).map((_, idx) => {
-                                const log = logs[idx];
+                                const log = regularLogs.find(l => l.doseIndex === idx);
                                 const isChecked = !!log;
                                 return (
-                                  <div key={idx} className="flex items-center gap-1.5 bg-stone-50 border border-stone-200/80 rounded-xl px-2.5 py-1.5">
+                                  <div key={idx} className="flex items-center gap-2 bg-stone-50 border border-stone-200 rounded-2xl px-3 py-2 min-h-[44px]">
                                     <button 
+                                      type="button"
                                       onClick={() => handleToggleDose(med, idx)}
-                                      className="transition active:scale-90 cursor-pointer"
+                                      className="transition active:scale-90 cursor-pointer text-emerald-500"
                                       title="點擊打卡"
                                     >
                                       {isChecked ? (
-                                        <CheckCircle2 className="w-6 h-6 text-emerald-500 fill-emerald-100" />
+                                        <CheckCircle2 className="w-7 h-7 text-emerald-500 fill-emerald-100" />
                                       ) : (
-                                        <Circle className="w-6 h-6 text-stone-300 hover:text-stone-400" />
+                                        <Circle className="w-7 h-7 text-stone-300 hover:text-stone-400" />
                                       )}
                                     </button>
 
                                     <div className="text-xs">
-                                      <span className="font-bold text-stone-700 block text-[11px]">
+                                      <span className="font-extrabold text-stone-700 block text-xs">
                                         {totalDosesNeeded > 1 ? `第 ${idx + 1} 次` : '服藥打卡'}
                                       </span>
                                       
@@ -640,6 +746,7 @@ export default function App() {
                                           />
                                         ) : (
                                           <button 
+                                            type="button"
                                             onClick={() => setEditingTimeLog(log.id)}
                                             className="text-[10px] text-emerald-700 font-bold hover:underline block"
                                             title="點擊修訂時間"
@@ -648,37 +755,66 @@ export default function App() {
                                           </button>
                                         )
                                       ) : (
-                                        <span className="text-[10px] text-stone-400">未打卡</span>
+                                        <span className="text-[10px] text-stone-400 font-bold">未打卡</span>
                                       )}
                                     </div>
                                   </div>
                                 );
                               })}
 
+                              {/* 補充藥物按鈕 */}
                               <button
+                                type="button"
                                 onClick={() => addExtraDose(med)}
-                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold px-2.5 py-2 rounded-xl border border-amber-200/60 flex items-center gap-1 transition cursor-pointer"
+                                className="bg-amber-50 hover:bg-amber-100 active:scale-95 text-amber-900 text-xs font-bold px-3 py-2 rounded-2xl border border-amber-200 flex items-center gap-1.5 transition cursor-pointer min-h-[44px]"
                                 title="有需要時加食一粒"
                               >
-                                <PlusCircle className="w-3.5 h-3.5 text-amber-600" />
+                                <PlusCircle className="w-4 h-4 text-amber-600" />
                                 <span>補充一粒</span>
                               </button>
                             </div>
+
+                            {/* 補充藥物紀錄列表（可隨時點擊綠色剔號取消刪除） */}
+                            {extraLogs.length > 0 && (
+                              <div className="pt-2 border-t border-dashed border-stone-200 space-y-1.5">
+                                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">已補充紀錄（點擊剔號即可隨時取消／扣庫存自動加返）：</span>
+                                <div className="flex gap-2 flex-wrap">
+                                  {extraLogs.map((extraLog) => (
+                                    <div key={extraLog.id} className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200 rounded-xl px-2.5 py-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => removeExtraDose(extraLog.id, med.id)}
+                                        className="text-emerald-600 hover:text-rose-500 transition active:scale-90 cursor-pointer"
+                                        title="點擊取消這一次補充"
+                                      >
+                                        <CheckCircle2 className="w-5 h-5 fill-emerald-100" />
+                                      </button>
+                                      <span className="text-xs font-bold text-amber-900">補充 1 粒 ({extraLog.timeStr})</span>
+                                      <span className="text-[10px] text-rose-500 font-bold ml-1">✖ 刪除</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                           </div>
                         )}
 
                       </div>
 
+                      {/* 編輯 / 刪除按鈕 */}
                       <div className="flex items-center gap-0.5">
                         <button 
+                          type="button"
                           onClick={() => openEditModal(med)}
-                          className="text-stone-400 hover:text-amber-600 p-1.5 transition rounded-xl hover:bg-amber-50 cursor-pointer"
+                          className="text-stone-400 hover:text-amber-600 p-2 transition rounded-xl hover:bg-amber-50 cursor-pointer"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
+                          type="button"
                           onClick={() => setDeleteConfirmTarget(med)}
-                          className="text-stone-300 hover:text-rose-500 p-1.5 transition rounded-xl hover:bg-rose-50 cursor-pointer"
+                          className="text-stone-300 hover:text-rose-500 p-2 transition rounded-xl hover:bg-rose-50 cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -688,8 +824,9 @@ export default function App() {
                     {med.freqType !== 'hours' && (
                       <div className="pt-2 border-t border-stone-100 flex justify-end">
                         <button
+                          type="button"
                           onClick={() => exportToIosCalendar(med)}
-                          className="text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200/60 flex items-center gap-1.5 transition cursor-pointer"
+                          className="text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200/60 flex items-center gap-1.5 transition cursor-pointer"
                         >
                           <BellRing className="w-3.5 h-3.5 text-amber-600" />
                           + 加至 iOS 日曆提醒
@@ -703,89 +840,141 @@ export default function App() {
           </div>
         )}
 
+        {/* 歷史紀錄 Tab (大翻新：按日期分組 + 按日期搜尋) */}
         {activeTab === 'history' && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center px-1">
-              <div>
-                <h2 className="font-bold text-stone-800 text-sm">歷來服藥紀錄</h2>
-                <p className="text-[11px] text-stone-400">（系統自動保留最近 60 日紀錄）</p>
+          <div className="space-y-3.5">
+            <div className="bg-white rounded-2xl p-3.5 border border-stone-200/70 shadow-sm space-y-2">
+              <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-amber-600" /> 按日期搜尋歷史紀錄：
+              </label>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="date" 
+                  value={historySearchDate}
+                  onChange={(e) => setHistorySearchDate(e.target.value)}
+                  className="text-xs font-bold bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500 flex-1"
+                />
+                {historySearchDate && (
+                  <button 
+                    type="button"
+                    onClick={() => setHistorySearchDate('')}
+                    className="bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer"
+                  >
+                    清除搜尋
+                  </button>
+                )}
               </div>
             </div>
 
-            {historyLogs.length === 0 ? (
+            {sortedHistoryDates.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center text-stone-400 border border-stone-200/60 shadow-sm">
                 <History className="w-8 h-8 mx-auto mb-2 text-stone-300" />
-                <p className="text-sm font-medium text-stone-600">暫時未有歷史 Log</p>
+                <p className="text-sm font-medium text-stone-600">未找到相符嘅歷史 Log</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {historyLogs.map((log) => (
-                  <div key={log.id} className="bg-white rounded-2xl p-3.5 border border-stone-200/70 shadow-sm flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-sm text-stone-800">{log.medName}</h4>
-                      <p className="text-xs text-stone-500">每次份量：{log.dosage}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs font-bold text-stone-700 bg-stone-100 px-2.5 py-1 rounded-lg inline-block">
-                        {log.date}
+              sortedHistoryDates.map((dateStr) => {
+                const dayLogs = groupedHistoryLogs[dateStr];
+                return (
+                  <div key={dateStr} className="space-y-2">
+                    {/* 日期大標題 */}
+                    <div className="sticky top-0 z-10 bg-[#F7F5F0]/90 backdrop-blur py-1">
+                      <span className="text-xs font-extrabold text-[#5C3A21] bg-amber-100/90 border border-amber-200/80 px-3 py-1 rounded-xl inline-flex items-center gap-1.5 shadow-xs">
+                        <Calendar className="w-3.5 h-3.5 text-amber-700" />
+                        {dateStr} ({dayLogs.length} 次紀錄)
                       </span>
-                      <p className="text-[10px] text-stone-400 pt-0.5">{log.timeStr} 服用</p>
+                    </div>
+
+                    {/* 當日 Log 列表 */}
+                    <div className="space-y-2">
+                      {dayLogs.map((log) => (
+                        <div key={log.id} className="bg-white rounded-2xl p-3.5 border border-stone-200/70 shadow-sm flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-extrabold text-sm text-stone-800">{log.medName}</h4>
+                              {log.isExtra && (
+                                <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.2 rounded-md">
+                                  額外補充
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-stone-500 font-medium">每次份量：{log.dosage}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60 inline-block">
+                              {log.timeStr} 服用
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })
             )}
           </div>
         )}
       </main>
 
-      {/* 新增藥物 Modal */}
+      {/* ========================================== */}
+      {/* 4. 手機 Bottom-Sheet 底部彈窗 - 新增藥物 */}
+      {/* ========================================== */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 transition-opacity">
+          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100 max-h-[88vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            
+            {/* 手機拉條指示器 */}
+            <div className="w-12 h-1.5 bg-stone-300 rounded-full mx-auto -mt-2 mb-2 sm:hidden" />
+
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
-              <h3 className="font-bold text-base text-stone-900">新增藥物設定</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
+              <h3 className="font-extrabold text-base text-stone-900 flex items-center gap-1.5">
+                <PawPrint className="w-5 h-5 text-amber-600 fill-amber-200" />
+                新增藥物設定
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setIsAddModalOpen(false)} 
+                className="text-stone-400 hover:text-stone-600 p-1.5 rounded-full hover:bg-stone-100 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">藥物 / 補充品名稱</label>
+                <label className="block text-xs font-bold text-stone-600 mb-1">藥物 / 補充品名稱</label>
                 <input
                   type="text"
                   required
                   placeholder="例如：降血壓藥 / 維他命C"
                   value={addForm.name}
                   onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                  className="w-full border border-stone-200 rounded-2xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3 items-center">
                 <div>
-                  <label className="block text-xs font-bold text-amber-900 mb-1">每次服用份量</label>
+                  <label className="block text-xs font-bold text-stone-600 mb-1">每次服用份量</label>
                   <input
                     type="text"
                     placeholder="例如：1 粒 / 2 錠"
                     value={addForm.dosage}
                     onChange={(e) => setAddForm({ ...addForm, dosage: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                    className="w-full border border-stone-200 rounded-2xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 mb-1">預設服藥時間</label>
+                  <label className="block text-xs font-bold text-stone-600 mb-1">預設服藥時間</label>
                   <input
                     type="time"
                     value={addForm.time}
                     onChange={(e) => setAddForm({ ...addForm, time: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
+                    className="w-full border border-stone-200 rounded-2xl p-2.5 text-sm font-bold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2 bg-amber-50/40 p-3.5 rounded-2xl border border-amber-200/50">
+              <div className="space-y-2 bg-amber-50/60 p-4 rounded-3xl border border-amber-200/60">
                 <label className="block text-xs font-bold text-amber-900">⏱️ 請選擇服藥頻率</label>
                 
                 <div className="grid grid-cols-2 gap-2">
@@ -799,9 +988,9 @@ export default function App() {
                       key={mode.id}
                       type="button"
                       onClick={() => setAddForm({ ...addForm, freqType: mode.id })}
-                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                      className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
                         addForm.freqType === mode.id 
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm font-bold' 
                           : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50'
                       }`}
                     >
@@ -814,35 +1003,44 @@ export default function App() {
                 </div>
 
                 <div className="pt-2">
+                  {/* 1-Tap 服用次數按鈕 (1-5次) */}
                   {addForm.freqType === 'daily' && (
-                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
-                      <span className="text-xs font-bold text-stone-700">每日食幾多次？</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="5"
-                        value={addForm.dailyDoses}
-                        onChange={(e) => setAddForm({ ...addForm, dailyDoses: parseInt(e.target.value, 10) || 1 })}
-                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
-                      />
+                    <div className="bg-white p-3 rounded-2xl border border-amber-200/60 space-y-2">
+                      <span className="text-xs font-bold text-stone-700 block">每日食幾多次？ (1-Tap 快選)</span>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map((count) => (
+                          <button
+                            key={count}
+                            type="button"
+                            onClick={() => setAddForm({ ...addForm, dailyDoses: count })}
+                            className={`flex-1 py-2.5 rounded-xl font-black text-xs transition border cursor-pointer active:scale-95 ${
+                              addForm.dailyDoses === count 
+                                ? 'bg-amber-600 text-white border-amber-600 shadow-xs' 
+                                : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
+                            }`}
+                          >
+                            {count}次
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 
+                  {/* 每隔 X 日 - Stepper 計數器 */}
                   {addForm.freqType === 'interval' && (
-                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
-                      <span className="text-xs font-bold text-stone-700">每隔幾多日食一次？ (2 代表隔日)</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={addForm.intervalDays}
-                        onChange={(e) => setAddForm({ ...addForm, intervalDays: parseInt(e.target.value, 10) || 2 })}
-                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                    <div className="bg-white p-3 rounded-2xl border border-amber-200/60 space-y-2">
+                      <span className="text-xs font-bold text-stone-700 block">每隔幾多日食一次？ (2 代表隔日)</span>
+                      <StepperInput 
+                        value={addForm.intervalDays} 
+                        onChange={(val) => setAddForm({ ...addForm, intervalDays: val })}
+                        min={1}
+                        unit="日"
                       />
                     </div>
                   )}
 
                   {addForm.freqType === 'weekday' && (
-                    <div className="bg-white p-2.5 rounded-xl border border-amber-200/60 space-y-1.5">
+                    <div className="bg-white p-3 rounded-2xl border border-amber-200/60 space-y-1.5">
                       <span className="text-xs font-bold text-stone-700 block">請勾選需要食藥嘅星期：</span>
                       <div className="flex gap-1 justify-between">
                         {[
@@ -860,8 +1058,8 @@ export default function App() {
                               key={d.num}
                               type="button"
                               onClick={() => toggleWeekDay(addForm, setAddForm, d.num)}
-                              className={`w-8 h-8 rounded-full text-xs font-bold transition ${
-                                isSelected ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-500'
+                              className={`w-9 h-9 rounded-xl text-xs font-extrabold transition cursor-pointer active:scale-90 ${
+                                isSelected ? 'bg-amber-600 text-white shadow-xs' : 'bg-stone-100 text-stone-500'
                               }`}
                             >
                               {d.label}
@@ -872,41 +1070,40 @@ export default function App() {
                     </div>
                   )}
 
+                  {/* 每隔 X 小時 - Stepper 計數器 */}
                   {addForm.freqType === 'hours' && (
-                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
-                      <span className="text-xs font-bold text-stone-700">每隔幾個鐘食一次？</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={addForm.hoursVal}
-                        onChange={(e) => setAddForm({ ...addForm, hoursVal: parseInt(e.target.value, 10) || 6 })}
-                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                    <div className="bg-white p-3 rounded-2xl border border-amber-200/60 space-y-2">
+                      <span className="text-xs font-bold text-stone-700 block">每隔幾個鐘食一次？</span>
+                      <StepperInput 
+                        value={addForm.hoursVal} 
+                        onChange={(val) => setAddForm({ ...addForm, hoursVal: val })}
+                        min={1}
+                        unit="小時"
                       />
                     </div>
                   )}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">目前剩餘數量 (庫存粒數)</label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="例如：30"
-                  value={addForm.stock}
-                  onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+              {/* 目前剩餘庫存 - Stepper 計數器 */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-stone-600 mb-1">目前剩餘數量 (庫存粒數)</label>
+                <StepperInput 
+                  value={addForm.stock} 
+                  onChange={(val) => setAddForm({ ...addForm, stock: val })}
+                  min={0}
+                  unit="粒"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">備註 / 服用指示</label>
+                <label className="block text-xs font-bold text-stone-600 mb-1">備註 / 服用指示</label>
                 <input
                   type="text"
                   placeholder="例如：餐後溫水送服"
                   value={addForm.notes}
                   onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                  className="w-full border border-stone-200 rounded-2xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
 
@@ -914,13 +1111,13 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-3.5 rounded-2xl text-xs transition cursor-pointer active:scale-95"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer active:scale-95"
                 >
                   確定新增
                 </button>
@@ -930,51 +1127,63 @@ export default function App() {
         </div>
       )}
 
-      {/* 編輯藥物 Modal */}
+      {/* ========================================== */}
+      {/* 5. 手機 Bottom-Sheet 底部彈窗 - 編輯藥物 */}
+      {/* ========================================== */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 transition-opacity">
+          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100 max-h-[88vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            
+            <div className="w-12 h-1.5 bg-stone-300 rounded-full mx-auto -mt-2 mb-2 sm:hidden" />
+
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
-              <h3 className="font-bold text-base text-stone-900">編輯藥物設定</h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
+              <h3 className="font-extrabold text-base text-stone-900 flex items-center gap-1.5">
+                <PawPrint className="w-5 h-5 text-amber-600 fill-amber-200" />
+                編輯藥物設定
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setIsEditModalOpen(false)} 
+                className="text-stone-400 hover:text-stone-600 p-1.5 rounded-full hover:bg-stone-100 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">藥物名稱</label>
+                <label className="block text-xs font-bold text-stone-600 mb-1">藥物名稱</label>
                 <input
                   type="text"
                   required
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                  className="w-full border border-stone-200 rounded-2xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3 items-center">
                 <div>
-                  <label className="block text-xs font-bold text-amber-900 mb-1">每次服用份量</label>
+                  <label className="block text-xs font-bold text-stone-600 mb-1">每次服用份量</label>
                   <input
                     type="text"
                     value={editForm.dosage}
                     onChange={(e) => setEditForm({ ...editForm, dosage: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                    className="w-full border border-stone-200 rounded-2xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 mb-1">預設時間</label>
+                  <label className="block text-xs font-bold text-stone-600 mb-1">預設時間</label>
                   <input
                     type="time"
                     value={editForm.time}
                     onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none text-center"
+                    className="w-full border border-stone-200 rounded-2xl p-2.5 text-sm font-bold text-stone-800 bg-stone-50/50 focus:outline-none text-center"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2 bg-amber-50/40 p-3.5 rounded-2xl border border-amber-200/50">
+              <div className="space-y-2 bg-amber-50/60 p-4 rounded-3xl border border-amber-200/60">
                 <label className="block text-xs font-bold text-amber-900">⏱️ 請選擇服藥頻率</label>
                 
                 <div className="grid grid-cols-2 gap-2">
@@ -988,9 +1197,9 @@ export default function App() {
                       key={mode.id}
                       type="button"
                       onClick={() => setEditForm({ ...editForm, freqType: mode.id })}
-                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                      className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
                         editForm.freqType === mode.id 
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm font-bold' 
                           : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50'
                       }`}
                     >
@@ -1003,35 +1212,44 @@ export default function App() {
                 </div>
 
                 <div className="pt-2">
+                  {/* 1-Tap 服用次數按鈕 (1-5次) */}
                   {editForm.freqType === 'daily' && (
-                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
-                      <span className="text-xs font-bold text-stone-700">每日食幾多次？</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="5"
-                        value={editForm.dailyDoses}
-                        onChange={(e) => setEditForm({ ...editForm, dailyDoses: parseInt(e.target.value, 10) || 1 })}
-                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
-                      />
+                    <div className="bg-white p-3 rounded-2xl border border-amber-200/60 space-y-2">
+                      <span className="text-xs font-bold text-stone-700 block">每日食幾多次？ (1-Tap 快選)</span>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map((count) => (
+                          <button
+                            key={count}
+                            type="button"
+                            onClick={() => setEditForm({ ...editForm, dailyDoses: count })}
+                            className={`flex-1 py-2.5 rounded-xl font-black text-xs transition border cursor-pointer active:scale-95 ${
+                              editForm.dailyDoses === count 
+                                ? 'bg-amber-600 text-white border-amber-600 shadow-xs' 
+                                : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
+                            }`}
+                          >
+                            {count}次
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 
+                  {/* 每隔 X 日 - Stepper 計數器 */}
                   {editForm.freqType === 'interval' && (
-                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
-                      <span className="text-xs font-bold text-stone-700">每隔幾多日食一次？</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={editForm.intervalDays}
-                        onChange={(e) => setEditForm({ ...editForm, intervalDays: parseInt(e.target.value, 10) || 2 })}
-                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                    <div className="bg-white p-3 rounded-2xl border border-amber-200/60 space-y-2">
+                      <span className="text-xs font-bold text-stone-700 block">每隔幾多日食一次？</span>
+                      <StepperInput 
+                        value={editForm.intervalDays} 
+                        onChange={(val) => setEditForm({ ...editForm, intervalDays: val })}
+                        min={1}
+                        unit="日"
                       />
                     </div>
                   )}
 
                   {editForm.freqType === 'weekday' && (
-                    <div className="bg-white p-2.5 rounded-xl border border-amber-200/60 space-y-1.5">
+                    <div className="bg-white p-3 rounded-2xl border border-amber-200/60 space-y-1.5">
                       <span className="text-xs font-bold text-stone-700 block">請勾選需要食藥嘅星期：</span>
                       <div className="flex gap-1 justify-between">
                         {[
@@ -1049,8 +1267,8 @@ export default function App() {
                               key={d.num}
                               type="button"
                               onClick={() => toggleWeekDay(editForm, setEditForm, d.num)}
-                              className={`w-8 h-8 rounded-full text-xs font-bold transition ${
-                                isSelected ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-500'
+                              className={`w-9 h-9 rounded-xl text-xs font-extrabold transition cursor-pointer active:scale-90 ${
+                                isSelected ? 'bg-amber-600 text-white shadow-xs' : 'bg-stone-100 text-stone-500'
                               }`}
                             >
                               {d.label}
@@ -1061,39 +1279,39 @@ export default function App() {
                     </div>
                   )}
 
+                  {/* 每隔 X 小時 - Stepper 計數器 */}
                   {editForm.freqType === 'hours' && (
-                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
-                      <span className="text-xs font-bold text-stone-700">每隔幾個鐘食一次？</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={editForm.hoursVal}
-                        onChange={(e) => setEditForm({ ...editForm, hoursVal: parseInt(e.target.value, 10) || 6 })}
-                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                    <div className="bg-white p-3 rounded-2xl border border-amber-200/60 space-y-2">
+                      <span className="text-xs font-bold text-stone-700 block">每隔幾個鐘食一次？</span>
+                      <StepperInput 
+                        value={editForm.hoursVal} 
+                        onChange={(val) => setEditForm({ ...editForm, hoursVal: val })}
+                        min={1}
+                        unit="小時"
                       />
                     </div>
                   )}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">剩餘庫存粒數</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editForm.stock}
-                  onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+              {/* 剩餘庫存粒數 - Stepper 計數器 */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-stone-600 mb-1">剩餘庫存粒數</label>
+                <StepperInput 
+                  value={editForm.stock} 
+                  onChange={(val) => setEditForm({ ...editForm, stock: val })}
+                  min={0}
+                  unit="粒"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">備註 / 服用指示</label>
+                <label className="block text-xs font-bold text-stone-600 mb-1">備註 / 服用指示</label>
                 <input
                   type="text"
                   value={editForm.notes}
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
+                  className="w-full border border-stone-200 rounded-2xl p-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                 />
               </div>
 
@@ -1101,13 +1319,13 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-3.5 rounded-2xl text-xs transition cursor-pointer active:scale-95"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer active:scale-95"
                 >
                   儲存修改
                 </button>
@@ -1117,16 +1335,20 @@ export default function App() {
         </div>
       )}
 
-      {/* 刪除確認 Modal */}
+      {/* ========================================== */}
+      {/* 6. 手機 Bottom-Sheet 底部彈窗 - 刪除確認 */}
+      {/* ========================================== */}
       {deleteConfirmTarget && (
-        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-rose-100">
+        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 transition-opacity">
+          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-rose-100 animate-in slide-in-from-bottom duration-200">
+            <div className="w-12 h-1.5 bg-stone-300 rounded-full mx-auto -mt-2 mb-2 sm:hidden" />
+
             <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-3xl mx-auto flex items-center justify-center shadow-inner relative">
               <PawPrint className="w-8 h-8 text-rose-500 fill-rose-200" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-base text-stone-900">確定要刪除嗎？</h3>
-              <p className="text-xs text-stone-500 px-2 leading-relaxed">
+              <h3 className="font-extrabold text-base text-stone-900">確定要刪除嗎？</h3>
+              <p className="text-xs text-stone-500 px-2 leading-relaxed font-medium">
                 喵～確定要將 <span className="font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">【{deleteConfirmTarget.name}】</span> 從清單移除？
               </p>
             </div>
@@ -1134,14 +1356,14 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setDeleteConfirmTarget(null)}
-                className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer"
+                className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-3 rounded-2xl text-xs transition cursor-pointer active:scale-95"
               >
                 保留
               </button>
               <button
                 type="button"
                 onClick={confirmDeleteMedication}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-rose-600/20 transition cursor-pointer"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3 rounded-2xl text-xs shadow-md shadow-rose-600/20 transition cursor-pointer active:scale-95"
               >
                 確認刪除
               </button>
@@ -1152,14 +1374,14 @@ export default function App() {
 
       {/* Alert Modal */}
       {customAlertMsg && (
-        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-amber-100">
             <div className="w-16 h-16 bg-amber-50 border border-amber-100 rounded-3xl mx-auto flex items-center justify-center shadow-inner">
               <PawPrint className="w-8 h-8 text-amber-600 fill-amber-300" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-base text-stone-900">{customAlertMsg.title}</h3>
-              <p className="text-xs text-stone-500 px-1 leading-relaxed">
+              <h3 className="font-extrabold text-base text-stone-900">{customAlertMsg.title}</h3>
+              <p className="text-xs text-stone-500 px-1 leading-relaxed font-medium">
                 {customAlertMsg.desc}
               </p>
             </div>
@@ -1167,7 +1389,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setCustomAlertMsg(null)}
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer"
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-extrabold py-3 rounded-2xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer active:scale-95"
               >
                 知道啦！✨
               </button>

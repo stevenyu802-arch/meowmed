@@ -770,7 +770,7 @@ export default function App() {
                                 title="有需要時加食一粒"
                               >
                                 <PlusCircle className="w-4 h-4 text-amber-600" />
-                                <span>補充一粒</span>
+                                <span>額外服用</span>
                               </button>
                             </div>
 
@@ -782,14 +782,14 @@ export default function App() {
                                   {extraLogs.map((extraLog) => (
                                     <div key={extraLog.id} className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200 rounded-xl px-2.5 py-1">
                                       <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
-                                      <span className="text-xs font-bold text-amber-900">補充 1 粒 ({extraLog.timeStr})</span>
+                                      <span className="text-xs font-bold text-amber-900">額外服用 ({extraLog.timeStr})</span>
                                       
                                       {/* 將「✖ 刪除」變成可點擊的 Button */}
                                       <button
                                         type="button"
                                         onClick={() => removeExtraDose(extraLog.id, med.id)}
                                         className="text-[10px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-1.5 py-0.5 rounded font-bold ml-1 transition active:scale-90 cursor-pointer"
-                                        title="點擊刪除這一次補充"
+                                        title="點擊刪除這一次額外服用"
                                       >
                                         ✖ 刪除
                                       </button>
@@ -896,7 +896,7 @@ export default function App() {
                               <h4 className="font-extrabold text-sm text-stone-800">{log.medName}</h4>
                               {log.isExtra && (
                                 <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.2 rounded-md">
-                                  額外補充
+                                  額外服用
                                 </span>
                               )}
                             </div>

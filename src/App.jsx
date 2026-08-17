@@ -539,37 +539,6 @@ export default function App() {
           </div>
         </div>
 
-          {/* 貓貓助手對話框 */}
-          <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/20 text-xs text-amber-50 font-medium transition-all duration-300 flex items-start gap-2">
-            <span className="text-base">💬</span>
-            <span className="leading-relaxed">{catQuotes[catMoodIndex]}</span>
-          </div>
-
-          {/* 進度條與貓爪 */}
-          <div className="space-y-1.5 pt-1 border-t border-amber-700/50">
-            <div className="flex justify-between items-center text-xs font-bold text-amber-100">
-              <span className="flex items-center gap-1.5">
-                <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-                今日進度：{completedCount} / {activeMedsToday.length} 款
-              </span>
-              <span className="bg-amber-700/60 text-amber-200 text-[11px] px-2 py-0.5 rounded-full border border-amber-500/30">
-                {progressPercent}%
-              </span>
-            </div>
-
-            <div className="w-full h-3 bg-black/30 rounded-full overflow-hidden p-0.5 border border-white/10">
-              <div 
-                className="h-full bg-gradient-to-r from-amber-400 to-amber-200 rounded-full transition-all duration-500 relative"
-                style={{ width: `${progressPercent}%` }}
-              >
-                {progressPercent > 0 && (
-                  <PawPrint className="w-2.5 h-2.5 text-amber-900 fill-amber-900 absolute right-1 top-1/2 -translate-y-1/2 opacity-70" />
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* 標題與新增按鈕 */}
         <div className="flex items-center justify-between mt-2 mb-1 px-1">
           <span className="text-xs font-bold text-[#5C3A21] tracking-wider">藥物清單管理</span>

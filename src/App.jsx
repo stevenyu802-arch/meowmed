@@ -140,7 +140,7 @@ export default function App() {
     ];
   });
 
-  // 打卡歷史 Log State
+  // 打卡歷史 Log State (只保留60日紀錄)[cite: 6]
   const [historyLogs, setHistoryLogs] = useState(() => {
     const saved = localStorage.getItem('meowmed_history_v12');
     if (!saved) return [];
@@ -465,8 +465,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
-      {/* 頂部 Header */}
-      <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-3 flex items-center justify-between max-w-md w-full mx-auto mt-2">
+      {/* 頂部 Header 加上安全距離 */}
+<header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-3 flex items-center justify-between max-w-md w-full mx-auto mt-2 pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-700 font-bold shadow-inner">
             <PawPrint className="w-5 h-5 fill-amber-500 text-amber-600 animate-pulse" />
@@ -848,7 +848,7 @@ export default function App() {
           <div className="space-y-3.5">
             <div className="bg-white rounded-2xl p-3.5 border border-stone-200/70 shadow-sm space-y-2">
               <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                <Search className="w-3.5 h-3.5 text-amber-600" /> 按日期搜尋歷史紀錄：
+                <Search className="w-3.5 h-3.5 text-amber-600" /> 按日期搜尋歷史紀錄（系統只保留最近 60 日紀錄）：
               </label>
               <div className="flex items-center gap-2">
                 <input 
@@ -1342,38 +1342,42 @@ export default function App() {
       {/* 6. 手機 Bottom-Sheet 底部彈窗 - 刪除確認 */}
       {/* ========================================== */}
       {deleteConfirmTarget && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 transition-opacity">
-          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-rose-100 animate-in slide-in-from-bottom duration-200">
-            <div className="w-12 h-1.5 bg-stone-300 rounded-full mx-auto -mt-2 mb-2 sm:hidden" />
+  <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 transition-opacity">
+    {/* 確保這裡有 max-w-xs w-full mx-auto 黎置中 */}
+    <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl max-w-xs w-full mx-auto p-6 shadow-2xl space-y-4 text-center border border-rose-100 animate-in slide-in-from-bottom duration-200 mb-safe sm:mb-0">
+      
+      <div className="w-12 h-1.5 bg-stone-300 rounded-full mx-auto -mt-2 mb-2 sm:hidden" />
 
-            <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-3xl mx-auto flex items-center justify-center shadow-inner relative">
-              <PawPrint className="w-8 h-8 text-rose-500 fill-rose-200" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-extrabold text-base text-stone-900">確定要刪除嗎？</h3>
-              <p className="text-xs text-stone-500 px-2 leading-relaxed font-medium">
-                喵～確定要將 <span className="font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">【{deleteConfirmTarget.name}】</span> 從清單移除？
-              </p>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmTarget(null)}
-                className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-3 rounded-2xl text-xs transition cursor-pointer active:scale-95"
-              >
-                保留
-              </button>
-              <button
-                type="button"
-                onClick={confirmDeleteMedication}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3 rounded-2xl text-xs shadow-md shadow-rose-600/20 transition cursor-pointer active:scale-95"
-              >
-                確認刪除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-3xl mx-auto flex items-center justify-center shadow-inner relative">
+        <PawPrint className="w-8 h-8 text-rose-500 fill-rose-200" />
+      </div>
+      
+      <div className="space-y-1 text-center">
+        <h3 className="font-extrabold text-base text-stone-900">確定要刪除嗎？</h3>
+        <p className="text-xs text-stone-500 px-2 leading-relaxed font-medium">
+          喵～確定要將 <span className="font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">【{deleteConfirmTarget.name}】</span> 從清單移除？
+        </p>
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <button
+          type="button"
+          onClick={() => setDeleteConfirmTarget(null)}
+          className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-3 rounded-2xl text-xs transition cursor-pointer active:scale-95"
+        >
+          保留
+        </button>
+        <button
+          type="button"
+          onClick={confirmDeleteMedication}
+          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold py-3 rounded-2xl text-xs shadow-md shadow-rose-600/20 transition cursor-pointer active:scale-95"
+        >
+          確認刪除
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Alert Modal */}
       {customAlertMsg && (

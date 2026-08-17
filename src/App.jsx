@@ -767,7 +767,7 @@ export default function App() {
                                 type="button"
                                 onClick={() => addExtraDose(med)}
                                 className="bg-amber-50 hover:bg-amber-100 active:scale-95 text-amber-900 text-xs font-bold px-3 py-2 rounded-2xl border border-amber-200 flex items-center gap-1.5 transition cursor-pointer min-h-[44px]"
-                                title="有需要時加食一粒"
+                                title="有需要時額外服用"
                               >
                                 <PlusCircle className="w-4 h-4 text-amber-600" />
                                 <span>額外服用</span>

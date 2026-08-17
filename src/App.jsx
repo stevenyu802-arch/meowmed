@@ -273,14 +273,14 @@ export default function App() {
     const day = String(now.getDate()).padStart(2, '0');
     const [hours, minutes] = (med.time || '08:00').split(':');
     const dtStart = `${year}${month}${day}T${hours.padStart(2, '0')}${minutes.padStart(2, '0')}00`;
-
+  
     let rrule = 'FREQ=DAILY';
     if (med.freqType === 'interval') {
       rrule = `FREQ=DAILY;INTERVAL=${med.intervalDays || 2}`;
     } else if (med.freqType === 'hours') {
       rrule = `FREQ=HOURLY;INTERVAL=${med.hoursVal || 6}`;
     }
-
+  
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -301,15 +301,23 @@ export default function App() {
       'END:VEVENT',
       'END:VCALENDAR'
     ].join('\r\n');
-
-    const encodedIcs = encodeURIComponent(icsContent);
-    const calendarUrl = `data:text/calendar;charset=utf8,${encodedIcs}`;
+  
+    // iOS Safari 相容性處理：同時支援 direct download 與系統喚醒
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const fileUrl = window.URL.createObjectURL(blob);
     
-    window.location.href = calendarUrl;
-
+    // 建立隱藏連結觸發下載/開啟
+    const a = document.createElement('a');
+    a.href = fileUrl;
+    a.download = `${med.name}_提醒.ics`;
+    a.target = '_blank'; // 嘗試開新頁觸發 iOS 系統選單
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  
     setCustomAlertMsg({
-      title: "成功匯出日曆！",
-      desc: `喵～【${med.name}】嘅智能提醒已經匯出，請在手機確認並加入日曆！📅✨`
+      title: "已生成日曆檔案！",
+      desc: `喵～【${med.name}】嘅日曆檔已下載！請喺 Safari 彈窗點擊「下載」，然後喺「檔案 (Files)」App 點擊該 .ics 檔，即可一鍵加入 iOS 日曆！📅✨`
     });
   };
 

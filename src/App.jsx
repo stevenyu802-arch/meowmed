@@ -1,6 +1,6 @@
 import FontSizeControl from "./FontSizeControl";
 import React, { useState, useEffect } from 'react';
-import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, History, X, AlertCircle, Package, PlusCircle, RefreshCw, BellRing, Sparkles, Timer } from 'lucide-react';
+import { Pill, Clock, Plus, Trash2, Edit2, CheckCircle2, Circle, Heart, Calendar, Cat, History, X, AlertCircle, Package, PlusCircle, RefreshCw, BellRing, Sparkles, Timer, Moon, Lock } from 'lucide-react';
 
 export default function App() {
   const getTodayStr = () => {
@@ -20,18 +20,17 @@ export default function App() {
     return `${year}-${month}-${day}`;
   };
 
-  // 升級版藥物資料結構：包含 freqType ('daily' | 'interval' | 'hours') 及 freqVal
   const [medications, setMedications] = useState(() => {
-    const saved = localStorage.getItem('meowmed_meds_v10');
+    const saved = localStorage.getItem('meowmed_meds_v11');
     return saved ? JSON.parse(saved) : [
-      { id: 1, name: '血壓藥 / 慢性病藥', dosage: '1 粒', time: '08:00', stock: 30, notes: '早餐後溫水送服', freqType: 'daily', freqVal: 1 },
-      { id: 2, name: '隔日維他命 C', dosage: '1 粒', time: '13:00', stock: 15, notes: '隔日補充', freqType: 'interval', freqVal: 2 },
-      { id: 3, name: '退燒止痛藥 (按需)', dosage: '2 粒', time: '12:00', stock: 10, notes: '發燒時每 6 小時一次', freqType: 'hours', freqVal: 6 }
+      { id: 1, name: '慢性病藥', dosage: '1 粒', time: '08:00', stock: 30, notes: '餐後溫水送服', freqType: 'daily', dailyDoses: 2, intervalDays: 1, weekDays: [1,2,3,4,5,6,0], hoursVal: 6 },
+      { id: 2, name: '維他命 C', dosage: '1 粒', time: '13:00', stock: 15, notes: '隔日補充', freqType: 'interval', dailyDoses: 1, intervalDays: 2, weekDays: [1,2,3,4,5,6,0], hoursVal: 6 },
+      { id: 3, name: '退燒止痛藥', dosage: '1 粒', time: '12:00', stock: 10, notes: '有需要時服用', freqType: 'hours', dailyDoses: 1, intervalDays: 1, weekDays: [1,2,3,4,5,6,0], hoursVal: 6 }
     ];
   });
 
   const [historyLogs, setHistoryLogs] = useState(() => {
-    const saved = localStorage.getItem('meowmed_history_v10');
+    const saved = localStorage.getItem('meowmed_history_v11');
     if (!saved) return [];
     const sixtyDaysAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
     return JSON.parse(saved).filter(log => log.timestamp >= sixtyDaysAgo);
@@ -40,29 +39,26 @@ export default function App() {
   const [userName, setUserName] = useState(() => localStorage.getItem('meowmed_username') || '自己');
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [activeTab, setActiveTab] = useState('today');
-  
-  const [activeMenuMedId, setActiveMenuMedId] = useState(null);
-  const [editingLogTarget, setEditingLogTarget] = useState(null);
+
+  const [editingTimeLog, setEditingTimeLog] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [addForm, setAddForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '', freqType: 'daily', freqVal: 1 });
+  const [addForm, setAddForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '', freqType: 'daily', dailyDoses: 1, intervalDays: 2, weekDays: [1,3,5], hoursVal: 6 });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMedId, setEditingMedId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '', freqType: 'daily', freqVal: 1 });
+  const [editForm, setEditForm] = useState({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '', freqType: 'daily', dailyDoses: 1, intervalDays: 2, weekDays: [1,3,5], hoursVal: 6 });
 
-  // 貓貓風格彈窗狀態
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
   const [customAlertMsg, setCustomAlertMsg] = useState(null);
 
   const [catMoodIndex, setCatMoodIndex] = useState(0);
   const catQuotes = [
-    "喵～新增咗間隔食藥同幾個鐘食一次嘅功能，好聰明呀！🐾",
-    "喵！有按時食藥同計好下次時間嘅主人最精靈！✨",
+    "喵～今日記得按時食藥，身體健康最重要！🐾",
+    "喵！有按時食藥同記低時間嘅主人最精靈！✨",
     "喵～今日飲咗足夠嘅溫水未呀？💧",
     "喵嗚～要隨時留意藥物庫存，冇藥要早啲補！📦",
-    "喵～可以點擊日曆圖示加入手機定時提醒啊！📅"
+    "喵～半夜聽朝起床打卡，系統會自動幫你計算下一次時間喔！🌙"
   ];
 
-  // 自動每隔 5 秒切換貓貓對白
   useEffect(() => {
     const timer = setInterval(() => {
       setCatMoodIndex((prev) => (prev + 1) % catQuotes.length);
@@ -71,11 +67,11 @@ export default function App() {
   }, [catQuotes.length]);
 
   useEffect(() => {
-    localStorage.setItem('meowmed_meds_v10', JSON.stringify(medications));
+    localStorage.setItem('meowmed_meds_v11', JSON.stringify(medications));
   }, [medications]);
 
   useEffect(() => {
-    localStorage.setItem('meowmed_history_v10', JSON.stringify(historyLogs));
+    localStorage.setItem('meowmed_history_v11', JSON.stringify(historyLogs));
   }, [historyLogs]);
 
   useEffect(() => {
@@ -90,63 +86,105 @@ export default function App() {
     }
   };
 
-  const getTakenLogsOnDate = (medId, dateStr) => {
+  const getLogsOnDate = (medId, dateStr) => {
     return historyLogs.filter(log => log.medId === medId && log.date === dateStr);
   };
 
-  // 智能計算下一次建議服藥時間
-  const calculateNextDueTime = (med) => {
-    const medLogs = historyLogs.filter(l => l.medId === med.id);
-    if (medLogs.length === 0) return '尚未開始服藥，隨時可以食';
+  // 判斷今日是否為該藥物之服藥日（用於隔日及指定星期模式）
+  const isMedicationActiveOnDate = (med, dateStr) => {
+    const targetDate = new Date(dateStr);
+    const dayOfWeek = targetDate.getDay();
+
+    if (med.freqType === 'weekday') {
+      return med.weekDays ? med.weekDays.includes(dayOfWeek) : true;
+    }
+
+    if (med.freqType === 'interval') {
+      const allMedLogs = historyLogs
+        .filter(l => l.medId === med.id)
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+      if (allMedLogs.length === 0) return true;
+
+      const lastLog = allMedLogs[0];
+      const lastDate = new Date(lastLog.date);
+      const diffTime = Math.abs(targetDate - lastDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (lastLog.date === dateStr) return true;
+      const interval = Number(med.intervalDays) || 2;
+      return diffDays % interval === 0;
+    }
+
+    return true;
+  };
+
+  // 智能計算下一次建議服藥時間與睡眠保護提示
+  const calculateNextDueTimeInfo = (med) => {
+    const medLogs = historyLogs
+      .filter(l => l.medId === med.id)
+      .sort((a, b) => b.timestamp - a.timestamp);
+
+    if (medLogs.length === 0) return { text: '尚未開始服藥，隨時可以打卡', isNight: false };
 
     const lastLog = medLogs[0];
     const lastTimeMs = lastLog.timestamp;
 
     if (med.freqType === 'hours') {
-      const intervalHours = Number(med.freqVal) || 6;
+      const intervalHours = Number(med.hoursVal) || 6;
       const nextMs = lastTimeMs + intervalHours * 60 * 60 * 1000;
       const nextDate = new Date(nextMs);
+      const nextHour = nextDate.getHours();
       const timeStr = nextDate.toTimeString().slice(0, 5);
       const dateStr = `${nextDate.getMonth() + 1}月${nextDate.getDate()}日`;
-      return `${dateStr} ${timeStr} (距離上次 ${intervalHours} 小時)`;
+      
+      const isNight = nextHour >= 22 || nextHour < 7;
+      let text = `${dateStr} ${timeStr} (距離上次 ${intervalHours} 小時)`;
+      if (isNight) {
+        text += ' 🌙 [睡眠時間：今晚安心休息，聽朝起床打卡會自動重新計算]';
+      }
+      return { text, isNight };
     } else if (med.freqType === 'interval') {
-      const intervalDays = Number(med.freqVal) || 2;
+      const intervalDays = Number(med.intervalDays) || 2;
       const nextMs = lastTimeMs + intervalDays * 24 * 60 * 60 * 1000;
       const nextDate = new Date(nextMs);
       const year = nextDate.getFullYear();
       const month = String(nextDate.getMonth() + 1).padStart(2, '0');
       const day = String(nextDate.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day} (隔 ${intervalDays} 日)`;
+      return { text: `${year}-${month}-${day} (每隔 ${intervalDays} 日)`, isNight: false };
     } else {
       const nextMs = lastTimeMs + 24 * 60 * 60 * 1000;
       const nextDate = new Date(nextMs);
+      const timeStr = med.time || '08:00';
       const year = nextDate.getFullYear();
       const month = String(nextDate.getMonth() + 1).padStart(2, '0');
       const day = String(nextDate.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day} ${med.time || '08:00'}`;
+      return { text: `${year}-${month}-${day} ${timeStr}`, isNight: false };
     }
   };
 
-  const toggleQuickLog = (med) => {
-    const logs = getTakenLogsOnDate(med.id, selectedDate);
-    if (logs.length === 0) {
+  const handleToggleDose = (med, doseIndex) => {
+    const logs = getLogsOnDate(med.id, selectedDate);
+    const existingLog = logs[doseIndex];
+
+    if (existingLog) {
+      setHistoryLogs(prev => prev.filter(l => l.id !== existingLog.id));
+      setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: m.stock + 1 } : m));
+    } else {
       const now = new Date();
-      const timeStr = med.time || now.toTimeString().slice(0, 5);
+      const timeStr = now.toTimeString().slice(0, 5);
       const newLog = {
-        id: Date.now(),
+        id: Date.now() + Math.random(),
         medId: med.id,
         medName: med.name,
         dosage: med.dosage,
         date: selectedDate,
         timeStr: timeStr,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        doseIndex: doseIndex
       };
       setHistoryLogs(prev => [newLog, ...prev]);
       setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
-    } else {
-      const lastLog = logs[0];
-      setHistoryLogs(prev => prev.filter(l => l.id !== lastLog.id));
-      setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: m.stock + 1 } : m));
     }
   };
 
@@ -154,31 +192,22 @@ export default function App() {
     const now = new Date();
     const timeStr = now.toTimeString().slice(0, 5);
     const newLog = {
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       medId: med.id,
       medName: med.name,
       dosage: med.dosage,
       date: selectedDate,
       timeStr: timeStr,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      doseIndex: 99
     };
     setHistoryLogs(prev => [newLog, ...prev]);
     setMedications(prev => prev.map(m => m.id === med.id ? { ...m, stock: Math.max(0, m.stock - 1) } : m));
-    setActiveMenuMedId(null);
   };
 
-  const deleteSpecificLog = (logId, medId) => {
-    setHistoryLogs(prev => prev.filter(l => l.id !== logId));
-    setMedications(prev => prev.map(m => m.id === medId ? { ...m, stock: m.stock + 1 } : m));
-    setActiveMenuMedId(null);
-    setEditingLogTarget(null);
-  };
-
-  const saveLogTimeChange = (logId) => {
-    if (!editingLogTarget) return;
-    setHistoryLogs(prev => prev.map(l => l.id === logId ? { ...l, timeStr: editingLogTarget.timeStr } : l));
-    setEditingLogTarget(null);
-    setActiveMenuMedId(null);
+  const handleSaveLogTime = (logId, newTimeStr) => {
+    setHistoryLogs(prev => prev.map(l => l.id === logId ? { ...l, timeStr: newTimeStr } : l));
+    setEditingTimeLog(null);
   };
 
   const exportToIosCalendar = (med) => {
@@ -191,9 +220,9 @@ export default function App() {
 
     let rrule = 'FREQ=DAILY';
     if (med.freqType === 'interval') {
-      rrule = `FREQ=DAILY;INTERVAL=${med.freqVal || 2}`;
+      rrule = `FREQ=DAILY;INTERVAL=${med.intervalDays || 2}`;
     } else if (med.freqType === 'hours') {
-      rrule = `FREQ=HOURLY;INTERVAL=${med.freqVal || 6}`;
+      rrule = `FREQ=HOURLY;INTERVAL=${med.hoursVal || 6}`;
     }
 
     const icsContent = [
@@ -204,7 +233,7 @@ export default function App() {
       'METHOD:PUBLISH',
       'BEGIN:VEVENT',
       `SUMMARY:🐱 MeowMed 提醒：食 ${med.name}`,
-      `DESCRIPTION:喵～該食藥啦！\\n藥物：${med.name}\\n劑量：${med.dosage || '1粒'}\\n模式：${med.freqType === 'hours' ? `每 ${med.freqVal} 小時一次` : med.freqType === 'interval' ? `每隔 ${med.freqVal} 日一次` : '每日定時'}\\n備註：${med.notes || '無'}`,
+      `DESCRIPTION:喵～該食藥啦！\\n藥物：${med.name}\\n劑量：${med.dosage || '1粒'}\\n備註：${med.notes || '無'}`,
       `DTSTART:${dtStart}`,
       `DTEND:${dtStart}`,
       rrule,
@@ -221,7 +250,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `MeowMed_${med.name}_智能提醒.ics`);
+    link.setAttribute('download', `MeowMed_${med.name}_提醒.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -229,12 +258,12 @@ export default function App() {
     
     setCustomAlertMsg({
       title: "成功加入日曆！",
-      desc: `喵～【${med.name}】嘅智能循環提醒已經順利匯出，請在手機打開並加入日曆！📅✨`
+      desc: `喵～【${med.name}】嘅智能提醒已經匯出，請在手機打開並加入日曆！📅✨`
     });
   };
 
   const openAddModal = () => {
-    setAddForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '', freqType: 'daily', freqVal: 1 });
+    setAddForm({ name: '', dosage: '1 粒', time: '08:00', stock: 30, notes: '', freqType: 'daily', dailyDoses: 1, intervalDays: 2, weekDays: [1,3,5], hoursVal: 6 });
     setIsAddModalOpen(true);
   };
 
@@ -256,7 +285,10 @@ export default function App() {
       stock: med.stock !== undefined ? med.stock : 30,
       notes: med.notes || '',
       freqType: med.freqType || 'daily',
-      freqVal: med.freqVal || 1
+      dailyDoses: med.dailyDoses || 1,
+      intervalDays: med.intervalDays || 2,
+      weekDays: med.weekDays || [1,3,5],
+      hoursVal: med.hoursVal || 6
     });
     setIsEditModalOpen(true);
   };
@@ -276,7 +308,17 @@ export default function App() {
   };
 
   const todayDateStr = getTodayStr();
-  const completedCount = medications.filter(m => getTakenLogsOnDate(m.id, todayDateStr).length > 0).length;
+  const activeMedsToday = medications.filter(m => isMedicationActiveOnDate(m, todayDateStr));
+  const completedCount = activeMedsToday.filter(m => getLogsOnDate(m.id, todayDateStr).length >= (m.dailyDoses || 1)).length;
+
+  // 切換星期選擇的 Helper
+  const toggleWeekDay = (form, setForm, dayNum) => {
+    const current = form.weekDays || [];
+    const updated = current.includes(dayNum)
+      ? current.filter(d => d !== dayNum)
+      : [...current, dayNum];
+    setForm({ ...form, weekDays: updated });
+  };
 
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
@@ -315,7 +357,6 @@ export default function App() {
             <button 
               onClick={() => setCatMoodIndex((prev) => (prev + 1) % catQuotes.length)}
               className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner cursor-pointer"
-              title="點擊手動切換下一句"
             >
               <Cat className="w-6 h-6 text-amber-100" />
               <Sparkles className="w-3.5 h-3.5 text-amber-200 animate-pulse" />
@@ -329,10 +370,10 @@ export default function App() {
           <div className="pt-1 flex items-center justify-between text-xs text-amber-100 font-semibold border-t border-amber-400/30">
             <span className="flex items-center gap-1">
               <Heart className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-              今日進度：{completedCount} / {medications.length} 款
+              今日進度：{completedCount} / {activeMedsToday.length} 款
             </span>
             <span className="text-[11px] bg-amber-800/30 px-2 py-0.5 rounded-lg border border-amber-400/20">
-              {completedCount === medications.length && medications.length > 0 ? '✨ 今日全部完成！' : '加油按時服藥'}
+              {completedCount === activeMedsToday.length && activeMedsToday.length > 0 ? '✨ 今日任務完成！' : '按時服藥最精靈'}
             </span>
           </div>
         </div>
@@ -376,7 +417,7 @@ export default function App() {
             <div className="bg-white rounded-2xl p-3.5 border border-stone-200/70 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-amber-600" /> 檢視/補Mark日期：
+                  <Calendar className="w-3.5 h-3.5 text-amber-600" /> 檢視 / 補打卡日期：
                 </span>
                 
                 {selectedDate !== getTodayStr() && (
@@ -402,8 +443,8 @@ export default function App() {
               <div className="flex gap-1.5">
                 {[
                   { label: '今日', days: 0 },
-                  { label: '昨日 (補Mark)', days: 1 },
-                  { label: '前日 (補Mark)', days: 2 }
+                  { label: '昨日 (補打卡)', days: 1 },
+                  { label: '前日 (補打卡)', days: 2 }
                 ].map((tab) => {
                   const targetDate = getDateStr(tab.days);
                   const isActive = selectedDate === targetDate;
@@ -424,7 +465,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* 藥物列表 */}
+            {/* 藥物清單 */}
             {medications.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center border border-stone-200/60 shadow-sm">
                 <AlertCircle className="w-8 h-8 mx-auto mb-2 text-stone-300" />
@@ -433,190 +474,164 @@ export default function App() {
               </div>
             ) : (
               medications.map((med) => {
-                const logs = getTakenLogsOnDate(med.id, selectedDate);
-                const takenCount = logs.length;
+                const isActiveToday = isMedicationActiveOnDate(med, selectedDate);
+                const logs = getLogsOnDate(med.id, selectedDate);
+                const totalDosesNeeded = med.freqType === 'daily' ? (med.dailyDoses || 1) : 1;
+                const isCompleted = logs.length >= totalDosesNeeded;
                 const isLowStock = med.stock <= 5;
-                const isMenuOpen = activeMenuMedId === med.id;
-                const nextDue = calculateNextDueTime(med);
+                const nextDueInfo = calculateNextDueTimeInfo(med);
 
                 let freqBadgeText = '每日定時';
-                if (med.freqType === 'interval') freqBadgeText = `隔 ${med.freqVal} 日一次`;
-                if (med.freqType === 'hours') freqBadgeText = `每 ${med.freqVal} 小時一次`;
+                if (med.freqType === 'interval') freqBadgeText = `每隔 ${med.intervalDays || 2} 日`;
+                if (med.freqType === 'weekday') freqBadgeText = '指定星期幾';
+                if (med.freqType === 'hours') freqBadgeText = `每隔 ${med.hoursVal || 6} 小時`;
 
                 return (
                   <div 
                     key={med.id}
                     className={`bg-white rounded-2xl p-4 border transition-all duration-200 space-y-3 relative ${
-                      takenCount > 0 ? 'border-emerald-200 bg-emerald-50/20' : 'border-stone-200/80 shadow-sm hover:shadow-md'
+                      !isActiveToday 
+                        ? 'opacity-60 bg-stone-50/80 border-stone-200' 
+                        : isCompleted 
+                          ? 'border-emerald-200 bg-emerald-50/10' 
+                          : 'border-stone-200/80 shadow-sm hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1 pr-2">
-                        {/* 極速打卡按鈕 */}
-                        <button 
-                          onClick={() => toggleQuickLog(med)}
-                          className="mt-0.5 transition active:scale-90 relative cursor-pointer"
-                          title="點擊極速打卡／取消"
-                        >
-                          {takenCount > 0 ? (
-                            <CheckCircle2 className="w-7 h-7 text-emerald-500 fill-emerald-100" />
-                          ) : (
-                            <Circle className="w-7 h-7 text-stone-300 hover:text-stone-400" />
-                          )}
-                        </button>
+                      <div className="space-y-2 flex-1 pr-2">
+                        
+                        {/* 標題與標籤 */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-sm text-stone-800">{med.name}</h3>
+                          
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
+                            isLowStock ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-stone-100 text-stone-600'
+                          }`}>
+                            <Package className="w-3 h-3" /> 剩 {med.stock} {isLowStock && '(快完！)'}
+                          </span>
 
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-bold text-sm text-stone-800">
-                              {med.name}
-                            </h3>
-                            
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
-                              isLowStock ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-stone-100 text-stone-600'
-                            }`}>
-                              <Package className="w-3 h-3" /> 剩 {med.stock} {isLowStock && '(快完！)'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2 text-xs flex-wrap">
-                            <span className="flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/50">
-                              <Clock className="w-3 h-3 text-amber-600" /> {med.time}
-                            </span>
-                            <span className="text-[10px] bg-amber-100/80 text-amber-900 font-bold px-2 py-0.5 rounded-md">
-                              {freqBadgeText}
-                            </span>
-                            <span className="font-medium text-stone-600">{med.dosage}</span>
-                          </div>
-
-                          {/* 下次建議服藥提示 */}
-                          <div className="bg-stone-50/80 border border-stone-200/60 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 text-[11px] text-stone-600">
-                            <Timer className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                            <span><strong>下次建議：</strong>{nextDue}</span>
-                          </div>
-
-                          <div className="pt-0.5">
-                            {takenCount > 0 ? (
-                              <button
-                                onClick={() => setActiveMenuMedId(isMenuOpen ? null : med.id)}
-                                className="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-full border border-emerald-300 transition flex items-center gap-1 cursor-pointer shadow-xs"
-                              >
-                                <span>✨ 已服 {takenCount} 次 • {logs[0].timeStr}</span>
-                                <span className="text-[9px] opacity-75">▼ 管理</span>
-                              </button>
-                            ) : (
-                              <span className="text-[11px] text-stone-400 font-medium italic">
-                                尚未服藥（點擊左側圓圈即時打卡）
-                              </span>
-                            )}
-                          </div>
-
-                          {med.notes && (
-                            <p className="text-xs text-stone-400 italic pt-0.5">{med.notes}</p>
-                          )}
+                          <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-md">
+                            {freqBadgeText}
+                          </span>
                         </div>
+
+                        <div className="flex items-center gap-2 text-xs text-stone-600">
+                          <span className="flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/50">
+                            <Clock className="w-3 h-3 text-amber-600" /> {med.time}
+                          </span>
+                          <span className="font-medium">{med.dosage}</span>
+                        </div>
+
+                        {/* 下次建議時間 */}
+                        {isActiveToday && (
+                          <div className={`border rounded-xl px-2.5 py-1.5 flex items-start gap-1.5 text-[11px] ${
+                            nextDueInfo.isNight ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'bg-stone-50 border-stone-200/70 text-stone-600'
+                          }`}>
+                            {nextDueInfo.isNight ? <Moon className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" /> : <Timer className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />}
+                            <span><strong>下一次：</strong>{nextDueInfo.text}</span>
+                          </div>
+                        )}
+
+                        {med.notes && (
+                          <p className="text-xs text-stone-400 italic">{med.notes}</p>
+                        )}
+
+                        {/* Checkbox 打卡區域 */}
+                        {!isActiveToday ? (
+                          <div className="bg-stone-100 border border-stone-200 rounded-xl p-2.5 flex items-center gap-2 text-xs text-stone-500 font-bold">
+                            <Lock className="w-4 h-4 text-stone-400" />
+                            <span>今日為休息日 🐾 無需服藥</span>
+                          </div>
+                        ) : (
+                          <div className="pt-1 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {Array.from({ length: totalDosesNeeded }).map((_, idx) => {
+                                const log = logs[idx];
+                                const isChecked = !!log;
+                                return (
+                                  <div key={idx} className="flex items-center gap-1.5 bg-stone-50 border border-stone-200/80 rounded-xl px-2.5 py-1.5">
+                                    <button 
+                                      onClick={() => handleToggleDose(med, idx)}
+                                      className="transition active:scale-90 cursor-pointer"
+                                      title="點擊打卡"
+                                    >
+                                      {isChecked ? (
+                                        <CheckCircle2 className="w-6 h-6 text-emerald-500 fill-emerald-100" />
+                                      ) : (
+                                        <Circle className="w-6 h-6 text-stone-300 hover:text-stone-400" />
+                                      )}
+                                    </button>
+
+                                    <div className="text-xs">
+                                      <span className="font-bold text-stone-700 block text-[11px]">
+                                        {totalDosesNeeded > 1 ? `第 ${idx + 1} 次` : '服藥打卡'}
+                                      </span>
+                                      
+                                      {isChecked ? (
+                                        editingTimeLog === log.id ? (
+                                          <input 
+                                            type="time" 
+                                            defaultValue={log.timeStr}
+                                            onBlur={(e) => handleSaveLogTime(log.id, e.target.value)}
+                                            className="text-[10px] border border-amber-400 rounded px-1 font-bold bg-amber-50 w-16"
+                                            autoFocus
+                                          />
+                                        ) : (
+                                          <button 
+                                            onClick={() => setEditingTimeLog(log.id)}
+                                            className="text-[10px] text-emerald-700 font-bold hover:underline block"
+                                            title="點擊修訂時間"
+                                          >
+                                            {log.timeStr} ✏️
+                                          </button>
+                                        )
+                                      ) : (
+                                        <span className="text-[10px] text-stone-400">未打卡</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* ＋ 補充一粒小掣 */}
+                              <button
+                                onClick={() => addExtraDose(med)}
+                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold px-2.5 py-2 rounded-xl border border-amber-200/60 flex items-center gap-1 transition cursor-pointer"
+                                title="有需要時加食一粒"
+                              >
+                                <PlusCircle className="w-3.5 h-3.5 text-amber-600" />
+                                <span>補充一粒</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                       </div>
 
+                      {/* 編輯與刪除 */}
                       <div className="flex items-center gap-0.5">
                         <button 
                           onClick={() => openEditModal(med)}
                           className="text-stone-400 hover:text-amber-600 p-1.5 transition rounded-xl hover:bg-amber-50 cursor-pointer"
-                          title="編輯藥物設定"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => setDeleteConfirmTarget(med)}
                           className="text-stone-300 hover:text-rose-500 p-1.5 transition rounded-xl hover:bg-rose-50 cursor-pointer"
-                          title="刪除藥物"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
 
-                    {/* 微型選單面板 */}
-                    {isMenuOpen && (
-                      <div className="bg-stone-50 border border-stone-200 rounded-2xl p-3 mt-3 space-y-3 animate-fadeIn">
-                        <div className="flex justify-between items-center border-b border-stone-200 pb-2">
-                          <span className="text-xs font-bold text-stone-700">📋 管理 【{med.name}】 服藥紀錄</span>
-                          <button onClick={() => setActiveMenuMedId(null)} className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        <div className="space-y-2">
-                          {logs.map((log, idx) => (
-                            <div key={log.id} className="bg-white p-2.5 rounded-xl border border-stone-200 flex items-center justify-between gap-2">
-                              <span className="text-xs font-bold text-stone-600">第 {logs.length - idx} 次</span>
-
-                              {editingLogTarget?.logId === log.id ? (
-                                <div className="flex items-center gap-1">
-                                  <input 
-                                    type="time" 
-                                    value={editingLogTarget.timeStr}
-                                    onChange={(e) => setEditingLogTarget({ ...editingLogTarget, timeStr: e.target.value })}
-                                    className="border border-amber-400 rounded-lg px-2 py-0.5 text-xs font-bold text-center w-24 bg-amber-50"
-                                  />
-                                  <button 
-                                    onClick={() => saveLogTimeChange(log.id)}
-                                    className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer"
-                                  >
-                                    儲存
-                                  </button>
-                                  <button 
-                                    onClick={() => setEditingLogTarget(null)}
-                                    className="bg-stone-200 text-stone-600 text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer"
-                                  >
-                                    取消
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-bold text-stone-800 bg-stone-100 px-2 py-0.5 rounded-md">
-                                    {log.timeStr}
-                                  </span>
-                                  <button 
-                                    onClick={() => setEditingLogTarget({ logId: log.id, timeStr: log.timeStr })}
-                                    className="text-xs text-amber-600 hover:underline font-bold px-1 cursor-pointer"
-                                  >
-                                    ✏️ 改時間
-                                  </button>
-                                  <button 
-                                    onClick={() => deleteSpecificLog(log.id, med.id)}
-                                    className="text-xs text-rose-500 hover:underline font-bold px-1 cursor-pointer"
-                                  >
-                                    🗑️ Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="flex gap-2 pt-1">
-                          <button 
-                            onClick={() => addExtraDose(med)}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 transition shadow-xs cursor-pointer"
-                          >
-                            <PlusCircle className="w-3.5 h-3.5" /> ➕ 再加一粒
-                          </button>
-                          <button 
-                            onClick={() => toggleQuickLog(med)}
-                            className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer"
-                          >
-                            取消最後一次
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
                     <div className="pt-2 border-t border-stone-100 flex justify-end">
                       <button
                         onClick={() => exportToIosCalendar(med)}
-                        className="text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200/60 flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                        className="text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200/60 flex items-center gap-1.5 transition cursor-pointer"
                       >
                         <BellRing className="w-3.5 h-3.5 text-amber-600" />
-                        + 加至 iOS 智能日曆提醒
+                        + 加至 iOS 日曆提醒
                       </button>
                     </div>
                   </div>
@@ -631,7 +646,7 @@ export default function App() {
             <div className="flex justify-between items-center px-1">
               <div>
                 <h2 className="font-bold text-stone-800 text-sm">歷來服藥紀錄</h2>
-                <p className="text-[11px] text-stone-400">（系統將自動保留最近 60 日紀錄）</p>
+                <p className="text-[11px] text-stone-400">（系統自動保留最近 60 日紀錄）</p>
               </div>
             </div>
 
@@ -667,19 +682,19 @@ export default function App() {
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
-              <h3 className="font-bold text-base text-stone-900">新增彈性藥物提醒</h3>
+              <h3 className="font-bold text-base text-stone-900">新增藥物設定</h3>
               <button onClick={() => setIsAddModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit} className="space-y-3.5">
+            <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-stone-500 mb-1">藥物 / 補充品名稱</label>
                 <input
                   type="text"
                   required
-                  placeholder="例如：降血壓藥 / 維他命C / 退燒藥"
+                  placeholder="例如：降血壓藥 / 維他命C"
                   value={addForm.name}
                   onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                   className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
@@ -691,7 +706,7 @@ export default function App() {
                   <label className="block text-xs font-bold text-stone-500 mb-1">每次服用劑量</label>
                   <input
                     type="text"
-                    placeholder="例如：1 粒 / 10ml"
+                    placeholder="例如：1 粒"
                     value={addForm.dosage}
                     onChange={(e) => setAddForm({ ...addForm, dosage: e.target.value })}
                     className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
@@ -708,44 +723,108 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 頻率設定 */}
-              <div className="space-y-1.5 bg-amber-50/50 p-3 rounded-2xl border border-amber-200/50">
-                <label className="block text-xs font-bold text-amber-900 mb-1">⏱️ 服藥頻率模式</label>
-                <select
-                  value={addForm.freqType}
-                  onChange={(e) => setAddForm({ ...addForm, freqType: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-2 text-xs font-bold bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500 mb-2"
-                >
-                  <option value="daily">📅 每日定時服藥</option>
-                  <option value="interval">🔄 隔幾日服藥一次（例如隔日、每3日）</option>
-                  <option value="hours">⏰ 病發時每幾個鐘食一次（例如每6小時）</option>
-                </select>
+              {/* 手機優化版：圖卡式服藥頻率選擇器 */}
+              <div className="space-y-2 bg-amber-50/40 p-3.5 rounded-2xl border border-amber-200/50">
+                <label className="block text-xs font-bold text-amber-900">⏱️ 請選擇服藥方式</label>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'daily', title: '每日定時', desc: '例如每日 1 或 2 次' },
+                    { id: 'interval', title: '每隔 X 日', desc: '例如隔日/隔3日' },
+                    { id: 'weekday', title: '逢星期幾', desc: '例如逢二、四、六' },
+                    { id: 'hours', title: '按需要(每X小時)', desc: '每次打卡自動倒數' }
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setAddForm({ ...addForm, freqType: mode.id })}
+                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                        addForm.freqType === mode.id 
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                          : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50'
+                      }`}
+                    >
+                      <p className="font-bold text-xs">{mode.title}</p>
+                      <p className={`text-[10px] mt-0.5 ${addForm.freqType === mode.id ? 'text-amber-100' : 'text-stone-400'}`}>
+                        {mode.desc}
+                      </p>
+                    </button>
+                  ))}
+                </div>
 
-                {addForm.freqType === 'interval' && (
-                  <div>
-                    <label className="block text-[11px] font-bold text-stone-600 mb-0.5">每隔幾日？ (例如 2 代表隔日)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={addForm.freqVal}
-                      onChange={(e) => setAddForm({ ...addForm, freqVal: e.target.value })}
-                      className="w-full border border-stone-200 rounded-xl p-2 text-xs bg-white"
-                    />
-                  </div>
-                )}
+                {/* 動態參數設定區 */}
+                <div className="pt-2">
+                  {addForm.freqType === 'daily' && (
+                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                      <span className="text-xs font-bold text-stone-700">每日食幾多次？</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={addForm.dailyDoses}
+                        onChange={(e) => setAddForm({ ...addForm, dailyDoses: parseInt(e.target.value, 10) || 1 })}
+                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                      />
+                    </div>
+                  )}
 
-                {addForm.freqType === 'hours' && (
-                  <div>
-                    <label className="block text-[11px] font-bold text-stone-600 mb-0.5">每隔幾個鐘？ (例如 6 代表每6小時)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={addForm.freqVal}
-                      onChange={(e) => setAddForm({ ...addForm, freqVal: e.target.value })}
-                      className="w-full border border-stone-200 rounded-xl p-2 text-xs bg-white"
-                    />
-                  </div>
-                )}
+                  {addForm.freqType === 'interval' && (
+                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                      <span className="text-xs font-bold text-stone-700">每隔幾多日食一次？ (2 代表隔日)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={addForm.intervalDays}
+                        onChange={(e) => setAddForm({ ...addForm, intervalDays: parseInt(e.target.value, 10) || 2 })}
+                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                      />
+                    </div>
+                  )}
+
+                  {addForm.freqType === 'weekday' && (
+                    <div className="bg-white p-2.5 rounded-xl border border-amber-200/60 space-y-1.5">
+                      <span className="text-xs font-bold text-stone-700 block">請勾選需要食藥嘅星期：</span>
+                      <div className="flex gap-1 justify-between">
+                        {[
+                          { num: 1, label: '一' },
+                          { num: 2, label: '二' },
+                          { num: 3, label: '三' },
+                          { num: 4, label: '四' },
+                          { num: 5, label: '五' },
+                          { num: 6, label: '六' },
+                          { num: 0, label: '日' }
+                        ].map((d) => {
+                          const isSelected = (addForm.weekDays || []).includes(d.num);
+                          return (
+                            <button
+                              key={d.num}
+                              type="button"
+                              onClick={() => toggleWeekDay(addForm, setAddForm, d.num)}
+                              className={`w-8 h-8 rounded-full text-xs font-bold transition ${
+                                isSelected ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-500'
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {addForm.freqType === 'hours' && (
+                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                      <span className="text-xs font-bold text-stone-700">每隔幾個鐘食一次？</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={addForm.hoursVal}
+                        onChange={(e) => setAddForm({ ...addForm, hoursVal: parseInt(e.target.value, 10) || 6 })}
+                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -764,7 +843,7 @@ export default function App() {
                 <label className="block text-xs font-bold text-stone-500 mb-1">備註 / 服用指示</label>
                 <input
                   type="text"
-                  placeholder="例如：餐後服用 / 發燒時服"
+                  placeholder="例如：餐後溫水送服"
                   value={addForm.notes}
                   onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
                   className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
@@ -796,19 +875,18 @@ export default function App() {
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-stone-100 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-stone-100 pb-3">
-              <h3 className="font-bold text-base text-stone-900">編輯藥物與頻率設定</h3>
+              <h3 className="font-bold text-base text-stone-900">編輯藥物設定</h3>
               <button onClick={() => setIsEditModalOpen(false)} className="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="space-y-3.5">
+            <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-stone-500 mb-1">藥物名稱</label>
                 <input
                   type="text"
                   required
-                  placeholder="例如：降血壓藥 / 維他命C"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
@@ -817,72 +895,133 @@ export default function App() {
 
               <div className="grid grid-cols-2 gap-3 items-center">
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 mb-1">每次服用劑量</label>
+                  <label className="block text-xs font-bold text-stone-500 mb-1">每次劑量</label>
                   <input
                     type="text"
-                    placeholder="例如：1 粒 / 10ml"
                     value={editForm.dosage}
                     onChange={(e) => setEditForm({ ...editForm, dosage: e.target.value })}
                     className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 mb-1">預設服藥時間</label>
+                  <label className="block text-xs font-bold text-stone-500 mb-1">預設時間</label>
                   <input
                     type="time"
                     value={editForm.time}
                     onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-amber-500 text-center"
+                    className="w-full border border-stone-200 rounded-xl p-2 text-sm font-semibold text-stone-800 bg-stone-50/50 focus:outline-none text-center"
                   />
                 </div>
               </div>
 
-              {/* 頻率設定 */}
-              <div className="space-y-1.5 bg-amber-50/50 p-3 rounded-2xl border border-amber-200/50">
-                <label className="block text-xs font-bold text-amber-900 mb-1">⏱️ 服藥頻率模式</label>
-                <select
-                  value={editForm.freqType}
-                  onChange={(e) => setEditForm({ ...editForm, freqType: e.target.value })}
-                  className="w-full border border-stone-200 rounded-xl p-2 text-xs font-bold bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500 mb-2"
-                >
-                  <option value="daily">📅 每日定時服藥</option>
-                  <option value="interval">🔄 隔幾日服藥一次</option>
-                  <option value="hours">⏰ 病發時每幾個鐘食一次</option>
-                </select>
+              {/* 手機優化版：圖卡式服藥頻率選擇器 */}
+              <div className="space-y-2 bg-amber-50/40 p-3.5 rounded-2xl border border-amber-200/50">
+                <label className="block text-xs font-bold text-amber-900">⏱️ 請選擇服藥方式</label>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'daily', title: '每日定時', desc: '例如每日 1 或 2 次' },
+                    { id: 'interval', title: '每隔 X 日', desc: '例如隔日/隔3日' },
+                    { id: 'weekday', title: '逢星期幾', desc: '例如逢二、四、六' },
+                    { id: 'hours', title: '按需要(每X小時)', desc: '每次打卡自動倒數' }
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, freqType: mode.id })}
+                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                        editForm.freqType === mode.id 
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                          : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50'
+                      }`}
+                    >
+                      <p className="font-bold text-xs">{mode.title}</p>
+                      <p className={`text-[10px] mt-0.5 ${editForm.freqType === mode.id ? 'text-amber-100' : 'text-stone-400'}`}>
+                        {mode.desc}
+                      </p>
+                    </button>
+                  ))}
+                </div>
 
-                {editForm.freqType === 'interval' && (
-                  <div>
-                    <label className="block text-[11px] font-bold text-stone-600 mb-0.5">每隔幾日？</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={editForm.freqVal}
-                      onChange={(e) => setEditForm({ ...editForm, freqVal: e.target.value })}
-                      className="w-full border border-stone-200 rounded-xl p-2 text-xs bg-white"
-                    />
-                  </div>
-                )}
+                <div className="pt-2">
+                  {editForm.freqType === 'daily' && (
+                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                      <span className="text-xs font-bold text-stone-700">每日食幾多次？</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={editForm.dailyDoses}
+                        onChange={(e) => setEditForm({ ...editForm, dailyDoses: parseInt(e.target.value, 10) || 1 })}
+                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                      />
+                    </div>
+                  )}
 
-                {editForm.freqType === 'hours' && (
-                  <div>
-                    <label className="block text-[11px] font-bold text-stone-600 mb-0.5">每隔幾個鐘？</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={editForm.freqVal}
-                      onChange={(e) => setEditForm({ ...editForm, freqVal: e.target.value })}
-                      className="w-full border border-stone-200 rounded-xl p-2 text-xs bg-white"
-                    />
-                  </div>
-                )}
+                  {editForm.freqType === 'interval' && (
+                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                      <span className="text-xs font-bold text-stone-700">每隔幾多日食一次？</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={editForm.intervalDays}
+                        onChange={(e) => setEditForm({ ...editForm, intervalDays: parseInt(e.target.value, 10) || 2 })}
+                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                      />
+                    </div>
+                  )}
+
+                  {editForm.freqType === 'weekday' && (
+                    <div className="bg-white p-2.5 rounded-xl border border-amber-200/60 space-y-1.5">
+                      <span className="text-xs font-bold text-stone-700 block">請勾選需要食藥嘅星期：</span>
+                      <div className="flex gap-1 justify-between">
+                        {[
+                          { num: 1, label: '一' },
+                          { num: 2, label: '二' },
+                          { num: 3, label: '三' },
+                          { num: 4, label: '四' },
+                          { num: 5, label: '五' },
+                          { num: 6, label: '六' },
+                          { num: 0, label: '日' }
+                        ].map((d) => {
+                          const isSelected = (editForm.weekDays || []).includes(d.num);
+                          return (
+                            <button
+                              key={d.num}
+                              type="button"
+                              onClick={() => toggleWeekDay(editForm, setEditForm, d.num)}
+                              className={`w-8 h-8 rounded-full text-xs font-bold transition ${
+                                isSelected ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-500'
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {editForm.freqType === 'hours' && (
+                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-200/60">
+                      <span className="text-xs font-bold text-stone-700">每隔幾個鐘食一次？</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={editForm.hoursVal}
+                        onChange={(e) => setEditForm({ ...editForm, hoursVal: parseInt(e.target.value, 10) || 6 })}
+                        className="w-16 border border-stone-200 rounded-lg p-1 text-center text-xs font-bold"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1">目前剩餘數量 (庫存粒數)</label>
+                <label className="block text-xs font-bold text-stone-500 mb-1">剩餘庫存粒數</label>
                 <input
                   type="number"
                   min="0"
-                  placeholder="例如：30"
                   value={editForm.stock}
                   onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
                   className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
@@ -893,7 +1032,6 @@ export default function App() {
                 <label className="block text-xs font-bold text-stone-500 mb-1">備註 / 服用指示</label>
                 <input
                   type="text"
-                  placeholder="例如：餐後服用 / 溫水送服"
                   value={editForm.notes}
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                   className="w-full border border-stone-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50/50"
@@ -920,17 +1058,17 @@ export default function App() {
         </div>
       )}
 
-      {/* 貓貓風格刪除確認 Modal */}
+      {/* 刪除確認 Modal */}
       {deleteConfirmTarget && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-amber-100 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-amber-100">
             <div className="w-14 h-14 bg-amber-100 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner">
               🐱❓
             </div>
             <div className="space-y-1">
               <h3 className="font-bold text-base text-stone-900">確定要刪除嗎？</h3>
               <p className="text-xs text-stone-500 px-2">
-                喵～確定要將 <span className="font-bold text-amber-800">【{deleteConfirmTarget.name}】</span> 從清單入面移除？
+                喵～確定要將 <span className="font-bold text-amber-800">【{deleteConfirmTarget.name}】</span> 從清單移除？
               </p>
             </div>
             <div className="flex gap-2 pt-2">
@@ -953,10 +1091,10 @@ export default function App() {
         </div>
       )}
 
-      {/* 貓貓風格通用 Alert Modal */}
+      {/* Alert Modal */}
       {customAlertMsg && (
         <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-amber-100 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-amber-100">
             <div className="w-14 h-14 bg-amber-500 text-white rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-md">
               🐾
             </div>

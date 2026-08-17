@@ -171,7 +171,7 @@ export default function App() {
     "喵！有按時食藥同記低時間嘅主人最精靈！✨",
     "喵～今日飲咗足夠嘅溫水未呀？💧",
     "喵嗚～要隨時留意藥物庫存，冇藥要早啲補！📦",
-    "喵～半夜聽朝起床打卡，系統會自動幫你計算下一次時間喔！🌙"
+    "喵～聽朝先起床打卡，系統會自動幫你計算下一次時間喔！🌙"
   ];
 
   useEffect(() => {
@@ -465,8 +465,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F7F5F0] text-stone-800 flex flex-col font-sans antialiased selection:bg-amber-200">
       
-      {/* 頂部 Header 加上安全距離 */}
-<header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-3 flex items-center justify-between max-w-md w-full mx-auto mt-2 pt-[env(safe-area-inset-top)]">
+      {/* 頂部 Header */}
+      <header className="bg-white/90 backdrop-blur border border-amber-100/85 shadow-xs rounded-2xl p-3.5 mb-3 flex items-center justify-between max-w-md w-full mx-auto mt-2">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-700 font-bold shadow-inner">
             <PawPrint className="w-5 h-5 fill-amber-500 text-amber-600 animate-pulse" />
@@ -1342,12 +1342,12 @@ export default function App() {
       {/* 6. 手機 Bottom-Sheet 底部彈窗 - 刪除確認 */}
       {/* ========================================== */}
       {deleteConfirmTarget && (
-  <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4 transition-opacity">
-    {/* 確保這裡有 max-w-xs w-full mx-auto 黎置中 */}
-    <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl max-w-xs w-full mx-auto p-6 shadow-2xl space-y-4 text-center border border-rose-100 animate-in slide-in-from-bottom duration-200 mb-safe sm:mb-0">
+  <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity">
+    
+    <div className="bg-white rounded-3xl max-w-xs w-full mx-auto p-6 shadow-2xl space-y-4 text-center border border-rose-100 animate-in zoom-in-95 duration-200">
       
-      <div className="w-12 h-1.5 bg-stone-300 rounded-full mx-auto -mt-2 mb-2 sm:hidden" />
-
+      {/* 手機版嘅頂部小拉柄（如果改為中間彈窗，通常唔需要呢條 bar，可以直接拎走或保留） */}
+      
       <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-3xl mx-auto flex items-center justify-center shadow-inner relative">
         <PawPrint className="w-8 h-8 text-rose-500 fill-rose-200" />
       </div>

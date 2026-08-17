@@ -1115,7 +1115,6 @@ export default function App() {
           <div className="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl space-y-4 text-center border border-rose-100">
             <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-3xl mx-auto flex items-center justify-center shadow-inner relative">
               <PawPrint className="w-8 h-8 text-rose-500 fill-rose-200" />
-              <span className="absolute -top-1 -right-1 text-xs">❓</span>
             </div>
             <div className="space-y-1">
               <h3 className="font-bold text-base text-stone-900">確定要刪除嗎？</h3>

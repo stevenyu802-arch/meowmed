@@ -483,17 +483,17 @@ export default function App() {
 
       <main className="flex-1 max-w-md w-full mx-auto px-4 py-1 space-y-4 pb-12">
         
-        {/* 貓貓進度卡片 (Cute Cat Theme) */}
-        <div className="bg-gradient-to-br from-[#5C3A21] via-amber-800 to-amber-900 text-white rounded-3xl p-5 shadow-xl shadow-amber-950/20 relative overflow-hidden space-y-3.5">
+        {/* 貓貓進度卡片 (方案A：奶白燕麥木系) */}
+        <div className="bg-[#F4E6D0] text-stone-800 rounded-3xl p-5 shadow-md shadow-stone-200/50 relative overflow-hidden space-y-3.5 border border-[#E8D5B7]">
           <div className="flex justify-between items-start relative z-10">
             <div className="space-y-1">
-              <span className="text-amber-200/90 text-[10px] font-bold tracking-wider uppercase">主子 / 服藥者</span>
+              <span className="text-stone-500 text-[10px] font-bold tracking-wider uppercase">主子 / 服藥者</span>
               <div>
                 <input 
                   type="text" 
                   value={userName} 
                   onChange={(e) => setUserName(e.target.value)}
-                  className="bg-transparent text-xl font-black focus:outline-none border-b border-amber-300/40 pb-0.5 w-32 tracking-tight text-white"
+                  className="bg-transparent text-xl font-black focus:outline-none border-b border-stone-400/40 pb-0.5 w-32 tracking-tight text-stone-800"
                 />
               </div>
             </div>
@@ -501,12 +501,43 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setCatMoodIndex((prev) => (prev + 1) % catQuotes.length)}
-              className="bg-white/15 hover:bg-white/25 p-2.5 rounded-2xl backdrop-blur-md border border-white/20 transition active:scale-90 flex items-center gap-1.5 shadow-inner cursor-pointer"
+              className="bg-white/60 hover:bg-white/80 p-2.5 rounded-2xl backdrop-blur-md border border-white/50 transition active:scale-90 flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              <Cat className="w-6 h-6 text-amber-200" />
-              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <Cat className="w-6 h-6 text-amber-700" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
             </button>
           </div>
+
+          {/* 貓貓助手對話框 */}
+          <div className="relative bg-white/60 backdrop-blur-md rounded-2xl p-3 border border-white/60 text-xs text-stone-700 font-medium transition-all duration-300 flex items-start gap-2 shadow-sm">
+            <span className="text-base">💬</span>
+            <span className="leading-relaxed">{catQuotes[catMoodIndex]}</span>
+          </div>
+
+          {/* 進度條與貓爪 */}
+          <div className="space-y-1.5 pt-1 border-t border-stone-300/50">
+            <div className="flex justify-between items-center text-xs font-bold text-stone-600">
+              <span className="flex items-center gap-1.5">
+                <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
+                今日進度：{completedCount} / {activeMedsToday.length} 款
+              </span>
+              <span className="bg-white/80 text-stone-700 text-[11px] px-2 py-0.5 rounded-full border border-stone-200 shadow-xs">
+                {progressPercent}%
+              </span>
+            </div>
+
+            <div className="w-full h-3 bg-stone-200/80 rounded-full overflow-hidden p-0.5 border border-stone-300/50">
+              <div 
+                className="h-full bg-gradient-to-r from-amber-300 to-amber-400 rounded-full transition-all duration-500 relative shadow-inner"
+                style={{ width: `${progressPercent}%` }}
+              >
+                {progressPercent > 0 && (
+                  <PawPrint className="w-2.5 h-2.5 text-amber-800 fill-amber-800 absolute right-1 top-1/2 -translate-y-1/2 opacity-70" />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
           {/* 貓貓助手對話框 */}
           <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/20 text-xs text-amber-50 font-medium transition-all duration-300 flex items-start gap-2">
@@ -774,23 +805,26 @@ export default function App() {
                               </button>
                             </div>
 
-                            {/* 補充藥物紀錄列表（可隨時點擊綠色剔號取消刪除） */}
+                            {/* 補充藥物紀錄列表（可隨時點擊刪除按鈕取消） */}
                             {extraLogs.length > 0 && (
                               <div className="pt-2 border-t border-dashed border-stone-200 space-y-1.5">
-                                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">已補充紀錄（點擊剔號即可隨時取消／扣庫存自動加返）：</span>
+                                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">已補充紀錄（點擊「刪除」即可隨時取消／扣庫存自動加返）：</span>
                                 <div className="flex gap-2 flex-wrap">
                                   {extraLogs.map((extraLog) => (
                                     <div key={extraLog.id} className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200 rounded-xl px-2.5 py-1">
+                                      <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
+                                      <span className="text-xs font-bold text-amber-900">補充 1 粒 ({extraLog.timeStr})</span>
+                                      
+                                      {/* 將「✖ 刪除」變成可點擊的 Button */}
                                       <button
                                         type="button"
                                         onClick={() => removeExtraDose(extraLog.id, med.id)}
-                                        className="text-emerald-600 hover:text-rose-500 transition active:scale-90 cursor-pointer"
-                                        title="點擊取消這一次補充"
+                                        className="text-[10px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-1.5 py-0.5 rounded font-bold ml-1 transition active:scale-90 cursor-pointer"
+                                        title="點擊刪除這一次補充"
                                       >
-                                        <CheckCircle2 className="w-5 h-5 fill-emerald-100" />
+                                        ✖ 刪除
                                       </button>
-                                      <span className="text-xs font-bold text-amber-900">補充 1 粒 ({extraLog.timeStr})</span>
-                                      <span className="text-[10px] text-rose-500 font-bold ml-1">✖ 刪除</span>
+
                                     </div>
                                   ))}
                                 </div>

@@ -267,6 +267,8 @@ export default function App() {
   };
 
   const exportToIosCalendar = (med) => {
+    if (med.freqType === 'hours') return;
+
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -274,11 +276,15 @@ export default function App() {
     const [hours, minutes] = (med.time || '08:00').split(':');
     const dtStart = `${year}${month}${day}T${hours.padStart(2, '0')}${minutes.padStart(2, '0')}00`;
   
+    const intervalNum = Number(med.intervalDays) || 2;
+
     let rrule = 'FREQ=DAILY';
     if (med.freqType === 'interval') {
-      rrule = `FREQ=DAILY;INTERVAL=${med.intervalDays || 2}`;
-    } else if (med.freqType === 'hours') {
-      rrule = `FREQ=HOURLY;INTERVAL=${med.hoursVal || 6}`;
+      rrule = `FREQ=DAILY;INTERVAL=${intervalNum}`;
+    } else if (med.freqType === 'weekday' && med.weekDays?.length) {
+      const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+      const byDay = med.weekDays.map(d => dayMap[d]).join(',');
+      rrule = `FREQ=WEEKLY;BYDAY=${byDay}`;
     }
   
     const icsContent = [
@@ -302,15 +308,12 @@ export default function App() {
       'END:VCALENDAR'
     ].join('\r\n');
   
-    // iOS Safari 相容性處理：同時支援 direct download 與系統喚醒
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const fileUrl = window.URL.createObjectURL(blob);
     
-    // 建立隱藏連結觸發下載/開啟
     const a = document.createElement('a');
     a.href = fileUrl;
     a.download = `${med.name}_提醒.ics`;
-    a.target = '_blank'; // 嘗試開新頁觸發 iOS 系統選單
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -682,15 +685,17 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-stone-100 flex justify-end">
-                      <button
-                        onClick={() => exportToIosCalendar(med)}
-                        className="text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200/60 flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <BellRing className="w-3.5 h-3.5 text-amber-600" />
-                        + 加至 iOS 日曆提醒
-                      </button>
-                    </div>
+                    {med.freqType !== 'hours' && (
+                      <div className="pt-2 border-t border-stone-100 flex justify-end">
+                        <button
+                          onClick={() => exportToIosCalendar(med)}
+                          className="text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200/60 flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <BellRing className="w-3.5 h-3.5 text-amber-600" />
+                          + 加至 iOS 日曆提醒
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })

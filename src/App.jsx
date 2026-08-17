@@ -288,33 +288,28 @@ export default function App() {
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       'BEGIN:VEVENT',
-      `SUMMARY:<img src="/cat-icon.png" className="w-8 h-8 rounded-full object-cover inline-block" alt="cat" /> MeowMed 提醒：食 ${med.name}`,
+      `SUMMARY:🐱 MeowMed 提醒：食 ${med.name}`,
       `DESCRIPTION:喵～該食藥啦！\\n藥物：${med.name}\\n每次份量：${med.dosage || '1粒'}\\n備註：${med.notes || '無'}`,
       `DTSTART:${dtStart}`,
       `DTEND:${dtStart}`,
-      rrule,
+      `RRULE:${rrule}`,
       'BEGIN:VALARM',
       'ACTION:DISPLAY',
-      `DESCRIPTION:<img src="/cat-icon.png" className="w-8 h-8 rounded-full object-cover inline-block" alt="cat" /> MeowMed 提醒：食 ${med.name}`,
+      `DESCRIPTION:🐱 MeowMed 提醒：食 ${med.name}`,
       'TRIGGER:-PT0M',
       'END:VALARM',
       'END:VEVENT',
       'END:VCALENDAR'
     ].join('\r\n');
 
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `MeowMed_${med.name}_提醒.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const encodedIcs = encodeURIComponent(icsContent);
+    const calendarUrl = `data:text/calendar;charset=utf8,${encodedIcs}`;
     
+    window.location.href = calendarUrl;
+
     setCustomAlertMsg({
-      title: "成功加入日曆！",
-      desc: `喵～【${med.name}】嘅智能提醒已經匯出，請在手機打開並加入日曆！📅✨`
+      title: "成功匯出日曆！",
+      desc: `喵～【${med.name}】嘅智能提醒已經匯出，請在手機確認並加入日曆！📅✨`
     });
   };
 
